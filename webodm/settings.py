@@ -36,7 +36,7 @@ except ImportError:
     secret = get_random_string(50, chars)
     with open(os.path.join(current_dir, 'secret_key.py'), 'w') as f:
         f.write("SECRET_KEY='{}'".format(secret))
-    SECRET_KEY=secret
+    SECRET_KEY = secret
 
     print("Generated secret key")
 
@@ -279,7 +279,7 @@ LOGGING = {
 
 
 # Auth
-LOGIN_REDIRECT_URL = '/dashboard/'
+LOGIN_REDIRECT_URL = '/dashboard'
 #LOGIN_URL = '/login/'
 LOGIN_URL = '/login/auth0'
 
