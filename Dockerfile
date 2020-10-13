@@ -39,7 +39,7 @@ WORKDIR /webodm/nodeodm/external/NodeODM
 RUN npm install --quiet
 
 WORKDIR /webodm
-RUN npm install --quiet -g webpack && npm install --quiet -g webpack-cli && npm install --quiet && webpack --mode production
+RUN npm install --quiet -g webpack@">4.16.2 <5.0.0" && npm install --quiet -g webpack-cli && npm install --quiet && webpack --mode production
 RUN python manage.py collectstatic --noinput
 RUN bash app/scripts/plugin_cleanup.sh && echo "from app.plugins import build_plugins;build_plugins()" | python manage.py shell
 
