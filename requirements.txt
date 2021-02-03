@@ -42,7 +42,7 @@ pyodm==1.5.4
 pyparsing==2.1.10
 python-jose~=3.0
 python-dotenv~=0.9
-pytz==2019.3
+pytz==2020.1
 rcssmin==1.0.6
 redis==3.2.0
 requests-toolbelt==0.9.1

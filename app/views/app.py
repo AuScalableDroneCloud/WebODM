@@ -54,7 +54,7 @@ def dashboard(request):
     if Project.objects.count() == 0:
         Project.objects.create(owner=request.user, name=_("First Project"))
 
-    return render(request, 'app/dashboard.html', {'title': 'Dashboard',
+    return render(request, 'app/dashboard.html', {'title': _('Dashboard'),
         'no_processingnodes': no_processingnodes,
         'no_tasks': no_tasks
     })
@@ -110,6 +110,8 @@ def model_display(request, project_pk=None, task_pk=None):
             }.items()
         })
 
+def about(request):
+    return render(request, 'app/about.html', {'title': _('About'), 'version': settings.VERSION})
 
 @login_required
 def processing_node(request, processing_node_id):
@@ -119,7 +121,7 @@ def processing_node(request, processing_node_id):
 
     return render(request, 'app/processing_node.html', 
             {
-                'title': 'Processing Node', 
+                'title': _('Processing Node'), 
                 'processing_node': pn,
                 'available_options_json': pn.get_available_options_json(pretty=True)
             })
@@ -153,7 +155,7 @@ def welcome(request):
 
     return render(request, 'app/welcome.html',
                   {
-                      'title': 'Welcome',
+                      'title': _('Welcome'),
                       'firstuserform': fuf
                   })
 
