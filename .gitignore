@@ -76,11 +76,9 @@ target/
 # celery beat schedule file
 celerybeat-schedule
 celerybeat.pid
-celerybeat-schedule.db
 
 # dotenv
 .env
-.env.secret
 
 # virtualenv
 venv/
@@ -100,3 +98,4 @@ package-lock.json
 .cronenv
 .initialized
 .vscode/
+.DS_Store

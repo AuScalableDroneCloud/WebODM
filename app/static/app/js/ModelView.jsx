@@ -121,24 +121,41 @@ class ModelView extends React.Component {
   }
 
   loadGeoreferencingOffset = (cb) => {
-    $.ajax({
-        url: `${this.assetsPath()}/odm_georeferencing/odm_georeferencing_model_geo.txt`,
-        type: 'GET',
-        error: () => {
-            console.warn("Cannot find odm_georeferencing_model_geo.txt (not georeferenced?)")
-            cb({x: 0, y: 0});
-        },
-        success: (data) => {
-            const lines = data.split("\n");
-            if (lines.length >= 2){
-                const [ x, y ] = lines[1].split(" ").map(parseFloat);
-                cb({x, y});
-            }else{
-                console.warn(`Malformed odm_georeferencing_model_geo.txt: ${data}`);
+    const geoFile = `${this.assetsPath()}/odm_georeferencing/coords.txt`;
+    const legacyGeoFile = `${this.assetsPath()}/odm_georeferencing/odm_georeferencing_model_geo.txt`;
+    const getGeoOffsetFromUrl = (url) => {
+        $.ajax({
+            url: url,
+            type: 'GET',
+            error: () => {
+                console.warn(`Cannot find ${url} (not georeferenced?)`);
                 cb({x: 0, y: 0});
+            },
+            success: (data) => {
+                const lines = data.split("\n");
+                if (lines.length >= 2){
+                    const [ x, y ] = lines[1].split(" ").map(parseFloat);
+                    cb({x, y});
+                }else{
+                    console.warn(`Malformed georeferencing file: ${data}`);
+                    cb({x: 0, y: 0});
+                }
             }
-        }
+        });
+    };
+
+    $.ajax({
+        type: "HEAD",
+        url: legacyGeoFile
+    }).done(() => {
+        // If a legacy georeferencing file is present
+        // we'll use that
+        getGeoOffsetFromUrl(legacyGeoFile);
+    }).fail(() => {
+        getGeoOffsetFromUrl(geoFile);
     });
+
+    
   }
 
   pointCloudFilePath = (cb) => {
@@ -170,6 +187,9 @@ class ModelView extends React.Component {
   }
 
   objFilePath(cb){
+    // Mostly for backward compatibility
+    // as newer versions of ODM do not have 
+    // a odm_textured_model.obj
     const geoUrl = this.texturedModelDirectoryPath() + 'odm_textured_model_geo.obj';
     const nongeoUrl = this.texturedModelDirectoryPath() + 'odm_textured_model.obj';
 
@@ -183,9 +203,20 @@ class ModelView extends React.Component {
     });
   }
 
-  mtlFilename(){
-    // For some reason, loading odm_textured_model_geo.mtl does not load textures properly
-    return 'odm_textured_model.mtl';
+  mtlFilename(cb){
+    // Mostly for backward compatibility
+    // as newer versions of ODM do not have 
+    // a odm_textured_model.mtl
+    const geoUrl = this.texturedModelDirectoryPath() + 'odm_textured_model_geo.mtl';
+
+    $.ajax({
+        type: "HEAD",
+        url: geoUrl
+    }).done(() => {
+        cb("odm_textured_model_geo.mtl");
+    }).fail(() => {
+        cb("odm_textured_model.mtl");
+    });
   }
 
   componentDidMount() {
@@ -411,24 +442,26 @@ class ModelView extends React.Component {
         const mtlLoader = new THREE.MTLLoader();
         mtlLoader.setPath(this.texturedModelDirectoryPath());
 
-        mtlLoader.load(this.mtlFilename(), (materials) => {
-            materials.preload();
-
-            const objLoader = new THREE.OBJLoader();
-            objLoader.setMaterials(materials);
-            this.objFilePath(filePath => {
-                objLoader.load(filePath, (object) => {
-                    this.loadGeoreferencingOffset((offset) => {
-                        object.translateX(offset.x);
-                        object.translateY(offset.y);
-        
-                        viewer.scene.scene.add(object);
-        
-                        this.modelReference = object;
-                        this.setPointCloudsVisible(false);
-        
-                        this.setState({
-                            initializingModel: false,
+        this.mtlFilename(mtlPath => {
+            mtlLoader.load(mtlPath, (materials) => {
+                materials.preload();
+    
+                const objLoader = new THREE.OBJLoader();
+                objLoader.setMaterials(materials);
+                this.objFilePath(filePath => {
+                    objLoader.load(filePath, (object) => {
+                        this.loadGeoreferencingOffset((offset) => {
+                            object.translateX(offset.x);
+                            object.translateY(offset.y);
+            
+                            viewer.scene.scene.add(object);
+            
+                            this.modelReference = object;
+                            this.setPointCloudsVisible(false);
+            
+                            this.setState({
+                                initializingModel: false,
+                            });
                         });
                     });
                 });
