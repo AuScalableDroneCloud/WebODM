@@ -21,23 +21,31 @@ export default class LibraryDialog extends Component {
     this.state = {
 				availableFolders: [],
 				selectedFolder: null,
+				selectedPlatform: null,
 				loadingFolders: true,
 				error: "",
     };
   }
-	
+
 	componentDidUpdate(){
-    if (this.props.platform !== null && this.props.platform.type == "library" && this.state.loadingFolders){
+    if (!this.props.platform) {
+      //Re-trigger folder loading on next selection
+      //without this we can only load folders for one cloud library
+      if (!this.state.loadingFolders) this.setState({loadingFolders: true});
+    }
+
+    if (this.props.platform !== null && this.props.platform.type == "library" && this.state.loadingFolders &&
+        this.state.selectedPlatform != this.props.platform.name) {
 	    $.get(`${this.props.apiURL}/cloudlibrary/${this.props.platform.name}/listfolders`)
 	    .done(result => {
 	      result.folders.forEach(album => {
 	        album.label = `${album.name} (${album.images_count} images)`;
 	        album.value = album.url;
 	      })
-	      this.setState({availableFolders: result.folders});
+	      this.setState({selectedPlatform: this.props.platform.name, availableFolders: result.folders});
 	    })
 	    .fail((error) => {
-	        this.setState({loadingFolders: false, error: "Cannot load folders. Check your internet connection."});
+	        this.setState({availableFolders: [], loadingFolders: false, error: "Cannot load folders. Check your internet connection."});
 	    })
 			.always(() => {
 				this.setState({loadingFolders: false});
@@ -73,7 +81,7 @@ export default class LibraryDialog extends Component {
 						isSearchable={true}
 						onChange={this.handleSelectFolder}
 						options={this.state.availableFolders}
-						placeholder={this.state.loadingFolders ? "Fetching Piwigo albums..." : "Please select a Piwigo album"}
+						placeholder={this.state.loadingFolders ? "Fetching folders..." : "Please select a folder"}
 						name="options"
 					/>
 				</Modal.Body>

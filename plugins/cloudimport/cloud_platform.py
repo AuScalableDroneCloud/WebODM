@@ -13,6 +13,7 @@ class CloudPlatform(ABC):
     def __init__(self, name, folder_url_example):
         self.name = name
         self.folder_url_example = folder_url_example
+        self.basepath = ""
   
     def verify_folder_url(self, folder_url):
         try:
@@ -27,7 +28,13 @@ class CloudPlatform(ABC):
         except Exception as e:
             logger.error(str(e))
             return None
-        
+
+    def connect(self, ds, user_id):
+        """Connect to the server if necessary,
+        Must be passed the datastore to get username/token etc
+        and the user_id is required for storing encrypted data
+        """
+        return None #No connection required by default
   
     def import_from_folder(self, folder_url):
         # Verify the url

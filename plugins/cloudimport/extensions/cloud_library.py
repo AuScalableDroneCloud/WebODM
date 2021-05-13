@@ -15,7 +15,7 @@ class CloudLibrary(PlatformExtension):
     def __init__(self, name, folder_url_example):
         super().__init__(name, folder_url_example)
     
-    def get_form_fields(self):
+    def get_form_fields(self, user_id):
         return [self.get_server_url_field()]
     
     def get_api_views(self):
@@ -34,7 +34,7 @@ class CloudLibrary(PlatformExtension):
                 base_payload[server_url_field.key] = stored_value
                 return base_payload
                 
-        base_payload['type'] = 'platform'        
+        base_payload['type'] = 'platform'
         return base_payload   
     
     def get_server_url_field(self):
@@ -86,7 +86,7 @@ class ServerURLField(StringField):
     def get_django_field(self, user_data_store):
         return forms.URLField(
             label="Server URL",
-            help_text="Please insert the URL of the Piwigo server",
+            help_text="Please insert the URL of the server",
             required=False,
             max_length=1024,
             widget=forms.URLInput(attrs={"placeholder": "http://piwigo-server.com"}),
@@ -106,13 +106,17 @@ class GetAllFoldersTaskView(TaskView):
             return Response({'error': 'Failed to find a platform with the name \'{}\''.format(platform_name)}, status=status.HTTP_400_BAD_REQUEST)
         
         ds = get_current_plugin().get_user_data_store(request.user)
-        
+
         server_url_field = platform.get_server_url_field()
         server_url = server_url_field.get_stored_value(ds)
         
-        if server_url == server_url_field.default_value:
+        if server_url == "":
             return Response({'error': 'You can\'t ask for the folders when there is no server configured'}, status=status.HTTP_412_PRECONDITION_FAILED)
         
+        #Open connection (if any, eg: WebDAV)
+        logger.info("Connecting..." + platform_name)
+        platform.connect(ds, request.user.id)
+        logger.info("Getting folder list")
         folders = platform.list_folders_in_server(server_url)
         
         return Response({'folders': [folder.serialize() for folder in folders]}, status=status.HTTP_200_OK)     
