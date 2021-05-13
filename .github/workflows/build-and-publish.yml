@@ -47,6 +47,6 @@ jobs:
         context: .
         push: true
         tags: |
-          auscalabledronecloud/asdc-webodm:latest
+          ghcr.io/auscalabledronecloud/asdc-webodm:latest
           ${{ steps.meta.outputs.tags }}
 
