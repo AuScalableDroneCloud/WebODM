@@ -34,6 +34,8 @@ class ImportFolderTaskView(TaskView):
             #Use webdav connection - get the connection info from user data
             ds = get_current_plugin().get_user_data_store(request.user)
             connection_details = platform.get_credentials(ds, request.user.id)
+            #Connect for the folder verify step
+            platform.connect(ds, request.user.id)
         
         # Make sure that the platform actually exists
         if platform == None:
