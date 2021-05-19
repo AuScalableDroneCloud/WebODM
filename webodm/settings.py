@@ -90,6 +90,12 @@ SOCIAL_AUTH_AUTH0_SCOPE = [
     'email'
 ]
 
+# Shared encryption key - for encrypting stored strings shared between webapp and worker
+# If not defined, will use the app secret key, but this is not reliable
+# (eg: webapp and worker will have different secret keys unless they use the same filesystem volume)
+ENCRYPTION_KEY = os.environ.get("WO_ENCRYPTION_KEY", SECRET_KEY)
+
+
 # Application definition
 
 INSTALLED_APPS = [
