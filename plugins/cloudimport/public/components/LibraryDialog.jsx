@@ -34,15 +34,23 @@ export default class LibraryDialog extends Component {
       if (!this.state.loadingFolders) this.setState({loadingFolders: true});
     }
 
+
     if (this.props.platform !== null && this.props.platform.type == "library" && this.state.loadingFolders &&
         this.state.selectedPlatform != this.props.platform.name) {
-	    $.get(`${this.props.apiURL}/cloudlibrary/${this.props.platform.name}/listfolders`)
+	    $.get(`${this.props.apiURL}/cloudlibrary/${this.props.platform.name}/listfolders` + (this.state.selectedFolder ? this.state.selectedFolder.url : ""))
 	    .done(result => {
+        let sel = null
 	      result.folders.forEach(album => {
-	        album.label = `${album.name} (${album.images_count} images)`;
+	        album.label = album.images_count >= 0 ? `${album.name} (${album.images_count} images)` : `${album.name}`;
 	        album.value = album.url;
+          //If the currently selected platform is found, re-select now the image count is loaded
+          if (this.state.selectedFolder && this.state.selectedFolder.name == album.name && this.state.selectedFolder.images_count == -1)
+            sel = album;
 	      })
-	      this.setState({selectedPlatform: this.props.platform.name, availableFolders: result.folders});
+        if (sel != null)
+  	      this.setState({selectedPlatform: this.props.platform.name, availableFolders: result.folders, selectedFolder: sel});
+        else
+  	      this.setState({selectedPlatform: this.props.platform.name, availableFolders: result.folders});
 	    })
 	    .fail((error) => {
 	        this.setState({availableFolders: [], loadingFolders: false, error: "Cannot load folders. Check your internet connection."});
@@ -53,7 +61,11 @@ export default class LibraryDialog extends Component {
     }
   }
 	
-	handleSelectFolder = (e) => this.setState({selectedFolder: e});
+	handleSelectFolder = (e) => {
+    //if (this.state.selectedFolder != e)
+      this.setState({selectedFolder: e, loadingFolders: true, selectedPlatform: null});
+  }
+
 	handleSubmit = e => this.props.onSubmit(this.state.selectedFolder);
 	
 	render() {

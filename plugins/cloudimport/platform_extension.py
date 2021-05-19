@@ -88,7 +88,9 @@ class EncryptedStringField(FormField):
                          iterations=100000,
                          backend=default_backend())
 
-        key = base64.urlsafe_b64encode(kdf.derive(settings.SECRET_KEY.encode('utf-8')))
+        #Our key is defined in settings.py from an environment var
+        #(Using settings.SECRET_KEY fails in production because worker/webapp have differing values)
+        key = base64.urlsafe_b64encode(kdf.derive(settings.ENCRYPTION_KEY.encode('utf-8')))
         self.f = Fernet(key)
 
     def decrypt_value(self, value):

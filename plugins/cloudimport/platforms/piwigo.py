@@ -54,7 +54,7 @@ class Platform(CloudLibrary):
         return file
     
     # Cloud Library
-    def build_folder_list_api_url(self, server_url):
+    def build_folder_list_api_url(self, server_url, root):
         return '{}/ws.php?format=json&method=pwg.categories.getList&recursive=true&tree_output=true'.format(server_url)
   
     def parse_payload_into_folders(self, payload):

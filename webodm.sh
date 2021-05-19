@@ -51,6 +51,8 @@ export WO_AUTH0_SECRET="$WO_AUTH0_SECRET"
 export WO_AUTH0_KEY="$WO_AUTH0_KEY"
 export WO_AUTH0_DOMAIN="$WO_AUTH0_DOMAIN"
 
+export WO_ENCRYPTION_KEY="$WO_ENCRYPTION_KEY"
+
 # Parse args for overrides
 POSITIONAL=()
 while [[ $# -gt 0 ]]

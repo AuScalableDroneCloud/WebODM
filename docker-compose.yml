@@ -35,6 +35,7 @@ services:
       - WO_AUTH0_DOMAIN
       - WO_AUTH0_KEY
       - WO_AUTH0_SECRET
+      - WO_ENCRYPTION_KEY
     restart: unless-stopped
     oom_score_adj: 0
   broker:
