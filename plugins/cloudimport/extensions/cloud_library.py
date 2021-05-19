@@ -19,8 +19,8 @@ class CloudLibrary(PlatformExtension):
         return [self.get_server_url_field()]
     
     def get_api_views(self):
-        return [("cloudlibrary/(?P<platform_name>[^/.]+)/listfolders", GetAllFoldersTaskView.as_view())]
-        
+        return [("cloudlibrary/(?P<platform_name>[^/.]+)/listfolders(?P<root>(?:/[^/]+)*)", GetAllFoldersTaskView.as_view())]
+
     def serialize(self, **kwargs):
         base_payload = {'name': self.name, 'folder_url_example': self.folder_url_example}
         if kwargs['user'] != None:
@@ -43,7 +43,7 @@ class CloudLibrary(PlatformExtension):
     def verify_server_url(self, server_url):
         try:
             # Define the API url we will call to get all the folders in the server
-            folder_list_api_url = self.build_folder_list_api_url(server_url)
+            folder_list_api_url = self.build_folder_list_api_url(server_url, "/")
             # Call the API
             payload = self.call_api(folder_list_api_url)
             # Parse the payload into File instances
@@ -54,9 +54,9 @@ class CloudLibrary(PlatformExtension):
             logger.error(str(e))
             return "Error. Invalid server URL."
 
-    def list_folders_in_server(self, server_url):
+    def list_folders_in_server(self, server_url, root):
         # Define the API url we will call to get all the folders in the server
-        folder_list_api_url = self.build_folder_list_api_url(server_url)
+        folder_list_api_url = self.build_folder_list_api_url(server_url, root)
         # Call the API
         payload = self.call_api(folder_list_api_url)
         # Parse the payload into File instances
@@ -71,7 +71,7 @@ class CloudLibrary(PlatformExtension):
         return files
   
     @abstractmethod
-    def build_folder_list_api_url(self, server_url):
+    def build_folder_list_api_url(self, server_url, root):
         """Build the url of the API that lists all the folders in the server"""
   
     @abstractmethod
@@ -99,7 +99,9 @@ class ServerURLField(StringField):
             raise forms.ValidationError(result)
 
 class GetAllFoldersTaskView(TaskView):
-    def get(self, request, platform_name):
+    def get(self, request, platform_name, root):
+        if not len(root):
+            root = '/'
         platform = get_platform_by_name(platform_name)
         
         if platform == None:
@@ -117,6 +119,6 @@ class GetAllFoldersTaskView(TaskView):
         logger.info("Connecting..." + platform_name)
         platform.connect(ds, request.user.id)
         logger.info("Getting folder list")
-        folders = platform.list_folders_in_server(server_url)
+        folders = platform.list_folders_in_server(server_url, root)
         
         return Response({'folders': [folder.serialize() for folder in folders]}, status=status.HTTP_200_OK)     

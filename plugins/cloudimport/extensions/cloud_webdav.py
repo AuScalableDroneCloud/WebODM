@@ -122,32 +122,53 @@ class CloudWebDAV(CloudLibrary):
             self._client = Client(options)
         return self._client
 
-    #Recurse and return folders with number of image files
-    def _read_folder(self, path, recursive=False, extensions=None):
+    #Recurse and return folders with number of image files/subfolders
+    def _read_folder(self, path, recursive=0, extensions=None):
+        if len(path) == 0 or path[-1] != '/': path = path + '/' 
         logger.info(" read folder:" + path)
         files = self._client.list(path)
-        name = files[0]
-        if name == 'webdav/':
-            name = '/'
-        files = files[1:]
+
         alldirs = []
+        if recursive != 0 and path != '/':
+            parent = str(pathlib.Path(path).parent)
+            #print("PATH:",path,"PARENT:",parent)
+            alldirs += [Folder('[/..] ' + parent, parent, 0)]
+
+        if len(files) == 0:
+            return alldirs
+
+        #Skip the first entry if it is current path
+        #(for some %*&#$ reason not all webdav servers do this)
+        name = pathlib.Path(path).name
+        first = files[0]
+        if first[-1] == '/' and (name == first or name == first[0:-1] or first == 'webdav/'):
+            files = files[1:]
+
         contents = []
+        folders = []
         for f in files:
             if f[0] == '.': continue
             if f[-1] == '/':
                 #Include subfolders?
-                if recursive:
+                if recursive > 0:
                     #print(path + f)
-                    alldirs += self._read_folder(path + f, True, extensions=extensions)
+                    alldirs += self._read_folder(path + f, recursive-1, extensions=extensions)
+                elif recursive < 0:
+                    #Add the folders without counting their images, unknown image count
+                    alldirs += [Folder(f[0:-1], path + f, -1)]
+                else:
+                    #Just add folders to list if not going into them
+                    folders += [f]
             else:
                 ext = pathlib.Path(f).suffix.lower()
                 if extensions is None or ext in extensions:
                     contents += [f]
 
-        #Skip current if no images
-        if len(contents):
+        #Skip current if no images or subfolders
+        if len(contents) or len(folders):
             #Remove trailing slash for name
-            alldirs += [Folder(name[0:-1], path, len(contents))]
+            #alldirs += [Folder(name[0:-1], path, len(contents))]
+            alldirs += [Folder(name, path, len(contents))]
         logger.info(" read folder entries: " + str(len(alldirs)))
         return alldirs
 
@@ -170,19 +191,20 @@ class CloudWebDAV(CloudLibrary):
             logger.info("WebDAV: No client, please connect first")
             return []
 
-        #File filter for images
+        #File filter for images and ground control points (.txt)
         ext_list = VALID_IMAGE_EXTENSIONS + ['.txt']
 
         #Get the type of request from the prefix
         req_type, url = api_url.split(':', maxsplit=1)
         logger.info("CALLING API:" + req_type + "," + url)
-        if req_type == 'folder_list_api':
+        if req_type.startswith('folder_list_api'):
             #Returns all folders and sub-folders with number of images within
-            return self._read_folder(url, recursive=True, extensions=ext_list)
+            #return self._read_folder(url, recursive=1, extensions=ext_list)
+            return self._read_folder(url, recursive=-1, extensions=ext_list)
 
         if req_type == 'folder_api':
             #Returns info about a folder, including number of images
-            return self._read_folder(url, recursive=False, extensions=ext_list)
+            return self._read_folder(url, recursive=0, extensions=ext_list)
 
         if req_type == 'files_in_folder_api':
             #Returns list of images in a folder
@@ -192,9 +214,9 @@ class CloudWebDAV(CloudLibrary):
         return payload
 
     # Cloud Library
-    def build_folder_list_api_url(self, server_url):
+    def build_folder_list_api_url(self, server_url, root):
         #return 'folder_list_api:' + server_url
-        return 'folder_list_api:/'
+        return 'folder_list_api:' + root
 
     def parse_payload_into_folders(self, payload):
         #Already in Folders()
