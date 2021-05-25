@@ -106,7 +106,7 @@ class CloudWebDAV(CloudLibrary):
         This method takes the user_data_store and gets connection details from there
         """
         options = self.get_credentials(ds, user_id)
-        self._client = self.connect_dict(options, user_id)
+        self.connect_dict(options, user_id)
 
     def connect_dict(self, options, user_id):
         """Connect to the server if necessary, the connection can be re-used by other methods
