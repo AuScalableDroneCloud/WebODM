@@ -8,6 +8,7 @@ from ..platform_helper import get_platform_by_name
 from ..platform_extension import PlatformExtension, StringField, EncryptedStringField
 from plugins.cloudimport.extensions.cloud_library import CloudLibrary, GetAllFoldersTaskView
 from plugins.cloudimport.cloud_platform import File, Folder, VALID_IMAGE_EXTENSIONS
+import urllib
 
 from webdav3.client import Client
 import pathlib
@@ -196,6 +197,8 @@ class CloudWebDAV(CloudLibrary):
 
         #Get the type of request from the prefix
         req_type, url = api_url.split(':', maxsplit=1)
+        #Decode url (spaces etc)
+        url = urllib.parse.unquote(url)
         logger.info("CALLING API:" + req_type + "," + url)
         if req_type.startswith('folder_list_api'):
             #Returns all folders and sub-folders with number of images within
