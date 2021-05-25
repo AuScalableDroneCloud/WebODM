@@ -11,6 +11,7 @@ from plugins.cloudimport.cloud_platform import File, Folder, VALID_IMAGE_EXTENSI
 import urllib
 
 from webdav3.client import Client
+from webdav3.exceptions import WebDavException
 import pathlib
 
 class CloudWebDAV(CloudLibrary):
@@ -104,10 +105,8 @@ class CloudWebDAV(CloudLibrary):
 
         This method takes the user_data_store and gets connection details from there
         """
-        if self._client is None and ds:
-            options = self.get_credentials(ds, user_id)
-            self._client = self.connect_dict(options, user_id)
-        return self._client
+        options = self.get_credentials(ds, user_id)
+        self._client = self.connect_dict(options, user_id)
 
     def connect_dict(self, options, user_id):
         """Connect to the server if necessary, the connection can be re-used by other methods
@@ -116,12 +115,18 @@ class CloudWebDAV(CloudLibrary):
         This method takes a dict containing connection details:
         "webdav_hostname", "webdav_login", "webdav_password"
         """
+        if self._client:
+            try:
+                self._client.info("/")
+            except (WebDavException) as e:
+                logger.info("WebDAV client exception, re-connecting:" + str(e))
+                self._client = None
+
         if self._client is None and options:
             #Dummy field for decryption
             es = ServerTokenField(self.name, user_id)
             options['webdav_password'] = es.decrypt_value(options['webdav_password'])
             self._client = Client(options)
-        return self._client
 
     #Recurse and return folders with number of image files/subfolders
     def _read_folder(self, path, recursive=0, extensions=None):

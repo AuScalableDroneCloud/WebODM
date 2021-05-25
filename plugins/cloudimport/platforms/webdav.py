@@ -1,6 +1,5 @@
 # This platform connects to a webdav server using the webdavclient3 python module
 # Currently only tested on the AARNet CloudStor service, but should work on any webdav interface
-from urllib.parse import urlparse
 from os import path
 from plugins.cloudimport.cloud_platform import File, Folder
 from plugins.cloudimport.extensions.cloud_webdav import CloudWebDAV
