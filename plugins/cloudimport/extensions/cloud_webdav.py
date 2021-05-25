@@ -128,6 +128,10 @@ class CloudWebDAV(CloudLibrary):
             options['webdav_password'] = es.decrypt_value(options['webdav_password'])
             self._client = Client(options)
 
+    def download(self, url, filepath):
+        #Use webdav connection to download file
+        self._client..download_sync(remote_path=url, local_path=filepath)
+
     def _get_files(self, path):
         files = self._client.list(path)
         if len(files) == 0:

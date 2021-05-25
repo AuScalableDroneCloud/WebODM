@@ -116,13 +116,13 @@ def import_files(task_id, files, user_id, connection_details=None):
     if connection_details and connection_details['type'] == 'webdav':
         #Use webdav connection
         from plugins.cloudimport.extensions.cloud_webdav import CloudWebDAV
-        connection = CloudWebDAV('', '').connect_dict(connection_details, user_id)
+        connection = CloudWebDAV('', '')
+        connection.connect_dict(connection_details, user_id)
 
     def download_file(task, file):
         path = task.task_path(file['name'])
         if connection:
-            #Use webdav connection
-            connection.download_sync(remote_path=file['url'], local_path=path)
+            connection.download(file['url'], path)
         else:
             download_stream = requests.get(file['url'], stream=True, timeout=60)
 
