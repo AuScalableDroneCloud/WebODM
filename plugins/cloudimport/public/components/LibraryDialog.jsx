@@ -31,12 +31,10 @@ export default class LibraryDialog extends Component {
     if (!this.props.platform) {
       //Re-trigger folder loading on next selection
       //without this we can only load folders for one cloud library
-      if (!this.state.loadingFolders) this.setState({loadingFolders: true});
+      if (!this.state.loadingFolders) this.setState({loadingFolders: true, selectedFolder: null});
     }
 
-
-    if (this.props.platform !== null && this.props.platform.type == "library" && this.state.loadingFolders &&
-        this.state.selectedPlatform != this.props.platform.name) {
+    if (this.props.platform !== null && this.props.platform.type == "library" && this.state.loadingFolders) {
 	    $.get(`${this.props.apiURL}/cloudlibrary/${this.props.platform.name}/listfolders` + (this.state.selectedFolder ? this.state.selectedFolder.url : ""))
 	    .done(result => {
         let sel = null
@@ -101,7 +99,7 @@ export default class LibraryDialog extends Component {
 					<Button onClick={onHide}>Close</Button>
 					<Button
 						bsStyle="primary"
-						disabled={this.state.selectedFolder === null}
+						disabled={this.state.selectedFolder === null || this.state.selectedFolder.images_count < 1}
 						onClick={this.handleSubmit}
 					>
 						<i className={"fa fa-upload"} />
