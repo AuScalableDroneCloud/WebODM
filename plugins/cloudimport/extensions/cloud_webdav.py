@@ -128,11 +128,26 @@ class CloudWebDAV(CloudLibrary):
             options['webdav_password'] = es.decrypt_value(options['webdav_password'])
             self._client = Client(options)
 
+    def _get_files(self, path):
+        files = self._client.list(path)
+        if len(files) == 0:
+            return []
+
+        #Skip the first entry if it is current path
+        #(for some %*&#$ reason not all webdav servers do this)
+        name = pathlib.Path(path).name
+        first = files[0]
+        if first[-1] == '/' and (name == first or name == first[0:-1] or first == 'webdav/'):
+            return files[1:]
+        return files
+
     #Recurse and return folders with number of image files/subfolders
     def _read_folder(self, path, recursive=0, extensions=None):
         if len(path) == 0 or path[-1] != '/': path = path + '/' 
         logger.info(" read folder:" + path)
-        files = self._client.list(path)
+        name = pathlib.Path(path).name
+        #files = self._client.list(path)
+        files = self._get_files(path)
 
         alldirs = []
         if recursive != 0 and path != '/':
@@ -142,13 +157,6 @@ class CloudWebDAV(CloudLibrary):
 
         if len(files) == 0:
             return alldirs
-
-        #Skip the first entry if it is current path
-        #(for some %*&#$ reason not all webdav servers do this)
-        name = pathlib.Path(path).name
-        first = files[0]
-        if first[-1] == '/' and (name == first or name == first[0:-1] or first == 'webdav/'):
-            files = files[1:]
 
         contents = []
         folders = []
@@ -180,8 +188,7 @@ class CloudWebDAV(CloudLibrary):
 
     def _read_files(self, path, extensions=None):
         logger.info(" read files in folder:" + path)
-        files = self._client.list(path)
-        files = files[1:]
+        files = self._get_files(path)
         contents = []
         for f in files:
             if f[0] == '.' or f[-1] == '/': continue
