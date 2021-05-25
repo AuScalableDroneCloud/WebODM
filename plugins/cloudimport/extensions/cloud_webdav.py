@@ -130,7 +130,7 @@ class CloudWebDAV(CloudLibrary):
 
     def download(self, url, filepath):
         #Use webdav connection to download file
-        self._client..download_sync(remote_path=url, local_path=filepath)
+        self._client.download_sync(remote_path=url, local_path=filepath)
 
     def _get_files(self, path):
         files = self._client.list(path)
