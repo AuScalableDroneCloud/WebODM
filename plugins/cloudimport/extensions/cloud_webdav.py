@@ -291,7 +291,7 @@ class ServerTokenField(EncryptedStringField):
             required=False,
             max_length=1024,
             #Don't use PasswordInput as it does other things we don't want, just hide the content
-            widget=forms.TextInput(attrs={'type':'password'}),
+            widget=forms.TextInput(attrs={'type':'password', 'autocomplete':'new-password'}),
             initial=self.get_stored_value(user_data_store),
             validators=[])
 
