@@ -13,7 +13,7 @@ class Platform(CloudPlatform):
         parse_result = urlparse(url)
         path_split = parse_result.path.split('/')
         if len(path_split) < 5:
-            raise Exception('Wrong URL format')
+            raise Exception('Wrong URL format: ' + url)
         _, owner, repo, _, ref, *paths = path_split
         path = '/'.join(paths)
 
