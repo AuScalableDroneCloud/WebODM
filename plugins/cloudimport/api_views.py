@@ -122,7 +122,17 @@ def import_files(task_id, files, user_id, connection_details=None):
     def download_file(task, file):
         path = task.task_path(file['name'])
         if connection:
-            connection.download(file['url'], path)
+            max_attempts = 10
+            for i in range(max_attempts):
+                try:
+                    connection.download(file['url'], path)
+                    break
+                except (Exception) as e:
+                    logger.error("Exception ocurred downloading file: " + file['url'] + " : " + str(e))
+                    logger.info("Attempting to re-connect...")
+                    import time
+                    time.sleep(2)
+                    connection.connect_dict(connection_details, user_id)
         else:
             download_stream = requests.get(file['url'], stream=True, timeout=60)
 
