@@ -11,6 +11,7 @@ from coreplugins.cloudimport.cloud_platform import File, Folder, VALID_IMAGE_EXT
 import urllib
 
 from webdav3.client import Client
+from webdav3.exceptions import WebDavException
 import pathlib
 
 class CloudWebDAV(CloudLibrary):
@@ -104,10 +105,8 @@ class CloudWebDAV(CloudLibrary):
 
         This method takes the user_data_store and gets connection details from there
         """
-        if self._client is None and ds:
-            options = self.get_credentials(ds, user_id)
-            self._client = self.connect_dict(options, user_id)
-        return self._client
+        options = self.get_credentials(ds, user_id)
+        self.connect_dict(options, user_id)
 
     def connect_dict(self, options, user_id):
         """Connect to the server if necessary, the connection can be re-used by other methods
@@ -116,18 +115,43 @@ class CloudWebDAV(CloudLibrary):
         This method takes a dict containing connection details:
         "webdav_hostname", "webdav_login", "webdav_password"
         """
+        if self._client:
+            try:
+                self._client.info("/")
+            except (WebDavException) as e:
+                logger.info("WebDAV client exception, re-connecting:" + str(e))
+                self._client = None
+
         if self._client is None and options:
             #Dummy field for decryption
             es = ServerTokenField(self.name, user_id)
             options['webdav_password'] = es.decrypt_value(options['webdav_password'])
             self._client = Client(options)
-        return self._client
+
+    def download(self, url, filepath):
+        #Use webdav connection to download file
+        self._client.download_sync(remote_path=url, local_path=filepath)
+
+    def _get_files(self, path):
+        files = self._client.list(path)
+        if len(files) == 0:
+            return []
+
+        #Skip the first entry if it is current path
+        #(for some %*&#$ reason not all webdav servers do this)
+        name = pathlib.Path(path).name
+        first = files[0]
+        if first[-1] == '/' and (name == first or name == first[0:-1] or first == 'webdav/'):
+            return files[1:]
+        return files
 
     #Recurse and return folders with number of image files/subfolders
     def _read_folder(self, path, recursive=0, extensions=None):
         if len(path) == 0 or path[-1] != '/': path = path + '/' 
         logger.info(" read folder:" + path)
-        files = self._client.list(path)
+        name = pathlib.Path(path).name
+        #files = self._client.list(path)
+        files = self._get_files(path)
 
         alldirs = []
         if recursive != 0 and path != '/':
@@ -137,13 +161,6 @@ class CloudWebDAV(CloudLibrary):
 
         if len(files) == 0:
             return alldirs
-
-        #Skip the first entry if it is current path
-        #(for some %*&#$ reason not all webdav servers do this)
-        name = pathlib.Path(path).name
-        first = files[0]
-        if first[-1] == '/' and (name == first or name == first[0:-1] or first == 'webdav/'):
-            files = files[1:]
 
         contents = []
         folders = []
@@ -175,8 +192,7 @@ class CloudWebDAV(CloudLibrary):
 
     def _read_files(self, path, extensions=None):
         logger.info(" read files in folder:" + path)
-        files = self._client.list(path)
-        files = files[1:]
+        files = self._get_files(path)
         contents = []
         for f in files:
             if f[0] == '.' or f[-1] == '/': continue
@@ -275,7 +291,7 @@ class ServerTokenField(EncryptedStringField):
             required=False,
             max_length=1024,
             #Don't use PasswordInput as it does other things we don't want, just hide the content
-            widget=forms.TextInput(attrs={'type':'password'}),
+            widget=forms.TextInput(attrs={'type':'password', 'autocomplete':'new-password'}),
             initial=self.get_stored_value(user_data_store),
             validators=[])
 

@@ -99,7 +99,7 @@ export default class LibraryDialog extends Component {
 					<Button onClick={onHide}>Close</Button>
 					<Button
 						bsStyle="primary"
-						disabled={this.state.selectedFolder === null || this.state.selectedFolder.images_count < 1}
+						disabled={this.state.selectedFolder === null || this.state.selectedFolder.images_count < 2}
 						onClick={this.handleSubmit}
 					>
 						<i className={"fa fa-upload"} />

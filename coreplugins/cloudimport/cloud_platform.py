@@ -34,7 +34,7 @@ class CloudPlatform(ABC):
         Must be passed the datastore to get username/token etc
         and the user_id is required for storing encrypted data
         """
-        return None #No connection required by default
+        return #No connection required by default
   
     def import_from_folder(self, folder_url):
         # Verify the url
