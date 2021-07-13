@@ -1,7 +1,7 @@
 # This platform connects to an ownCloud webdav server using the webdavclient3 python module
 # For the AARNet CloudStor service this just predefines the server url field,
 # so users only need their username and password
-from plugins.cloudimport.extensions.cloud_webdav import CloudWebDAV
+from coreplugins.cloudimport.extensions.cloud_webdav import CloudWebDAV
 
 class Platform(CloudWebDAV):
     def __init__(self):

@@ -27,7 +27,7 @@ from app.models.task import task_directory_path, full_task_directory_path, TaskI
 from app.plugins.signals import task_completed, task_removed, task_removing
 from app.tests.classes import BootTransactionTestCase
 from nodeodm import status_codes
-from nodeodm.models import ProcessingNode, OFFLINE_MINUTES
+from nodeodm.models import ProcessingNode
 from app.testwatch import testWatch
 from .utils import start_processing_node, clear_test_media_root, catch_signal
 
@@ -582,6 +582,35 @@ class TestApiTask(BootTransactionTestCase):
                 with Image.open(io.BytesIO(res.content)) as i:
                     self.assertEqual(i.width, 512)
                     self.assertEqual(i.height, 512)
+            
+            # Cannot set invalid scene
+            res = client.post("/api/projects/{}/tasks/{}/3d/scene".format(project.id, task.id), json.dumps({ "garbage": "" }), content_type="application/json")
+            self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+            # Can set scene
+            res = client.post("/api/projects/{}/tasks/{}/3d/scene".format(project.id, task.id), json.dumps({ "type": "Potree" }), content_type="application/json")
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data['success'], True)
+
+            # Can set camera view
+            res = client.post("/api/projects/{}/tasks/{}/3d/cameraview".format(project.id, task.id), json.dumps({ "position": [0,5,0], "target": [0,0,0] }), content_type="application/json")
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertEqual(res.data['success'], True)
+
+            # Can read potree scene
+            res = client.get("/api/projects/{}/tasks/{}/3d/scene".format(project.id, task.id))
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertListEqual(res.data['view']['position'], [0,5,0])
+            self.assertListEqual(res.data['view']['target'], [0,0,0])
+
+            # Setting scene does not change view key, even if specified
+            res = client.post("/api/projects/{}/tasks/{}/3d/scene".format(project.id, task.id), json.dumps({ "type": "Potree", "view": { "position": [9,9,9], "target": [0,0,0] }, "measurements": [1, 2] }), content_type="application/json")
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+            res = client.get("/api/projects/{}/tasks/{}/3d/scene".format(project.id, task.id))
+            self.assertEqual(res.status_code, status.HTTP_200_OK)
+            self.assertListEqual(res.data['view']['position'], [0,5,0])
+            self.assertListEqual(res.data['measurements'], [1, 2])
 
             # Cannot access tile 0/0/0
             res = client.get("/api/projects/{}/tasks/{}/orthophoto/tiles/0/0/0.png".format(project.id, task.id))
@@ -647,6 +676,9 @@ class TestApiTask(BootTransactionTestCase):
                 res = other_client.get("/api/projects/{}/tasks/{}/".format(project.id, task.id))
                 self.assertEqual(res.status_code, expectedStatus)
 
+                res = other_client.get("/api/projects/{}/tasks/{}/3d/scene".format(project.id, task.id))
+                self.assertEqual(res.status_code, expectedStatus)
+
             accessResources(status.HTTP_404_NOT_FOUND)
 
             # Original owner enables sharing
@@ -662,6 +694,12 @@ class TestApiTask(BootTransactionTestCase):
             res = other_client.patch("/api/projects/{}/tasks/{}/".format(project.id, task.id), {
                 'name': "Changed! Uh oh"
             })
+            self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+            # He cannot save a scene / change camera view
+            res = other_client.post("/api/projects/{}/tasks/{}/3d/cameraview".format(project.id, task.id), json.dumps({ "position": [0,0,0], "target": [0,0,0] }), content_type="application/json")
+            self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+            res = other_client.post("/api/projects/{}/tasks/{}/3d/scene".format(project.id, task.id), json.dumps({ "type": "Potree", "modified": True }), content_type="application/json")
             self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
 
             # User logs out
@@ -909,7 +947,7 @@ class TestApiTask(BootTransactionTestCase):
         self.assertTrue(task.last_error is not None)
 
         # Bring another processing node online, and bring the old one offline
-        pnode.last_refreshed = timezone.now() - timedelta(minutes=OFFLINE_MINUTES)
+        pnode.last_refreshed = timezone.now() - timedelta(minutes=settings.NODE_OFFLINE_MINUTES)
         pnode.save()
 
         another_pnode.last_refreshed = timezone.now()
@@ -936,7 +974,7 @@ class TestApiTask(BootTransactionTestCase):
         task.last_error = None
         task.status = status_codes.RUNNING
         task.save()
-        another_pnode.last_refreshed = timezone.now() - timedelta(minutes=OFFLINE_MINUTES)
+        another_pnode.last_refreshed = timezone.now() - timedelta(minutes=settings.NODE_OFFLINE_MINUTES)
         another_pnode.save()
 
         worker.tasks.process_pending_tasks()

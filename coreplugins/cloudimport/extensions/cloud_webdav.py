@@ -6,8 +6,8 @@ from app.plugins import get_current_plugin, logger
 from app.plugins.views import TaskView
 from ..platform_helper import get_platform_by_name
 from ..platform_extension import PlatformExtension, StringField, EncryptedStringField
-from plugins.cloudimport.extensions.cloud_library import CloudLibrary, GetAllFoldersTaskView
-from plugins.cloudimport.cloud_platform import File, Folder, VALID_IMAGE_EXTENSIONS
+from coreplugins.cloudimport.extensions.cloud_library import CloudLibrary, GetAllFoldersTaskView
+from coreplugins.cloudimport.cloud_platform import File, Folder, VALID_IMAGE_EXTENSIONS
 import urllib
 
 from webdav3.client import Client

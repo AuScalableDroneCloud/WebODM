@@ -15,6 +15,57 @@ require('./vendor/OBJLoader');
 require('./vendor/MTLLoader');
 require('./vendor/ColladaLoader');
 
+class SetCameraView extends React.Component{
+    static propTypes = {
+        viewer: PropTypes.object.isRequired,
+        task: PropTypes.object.isRequired
+    }
+
+    constructor(props){
+        super(props);
+        
+        this.state = {
+            error: "",
+            showOk: false
+        }
+    }
+
+    handleClick = () => {
+        const { view } = Potree.saveProject(this.props.viewer);
+        const showError = () => {
+            this.setState({error: _("Cannot set initial camera view")});
+            setTimeout(() => this.setState({error: ""}), 3000);
+        };
+        const showOk = () => {
+            this.setState({showOk: true});
+            setTimeout(() => this.setState({showOk: false}), 2000);
+        }
+
+        $.ajax({
+            url: `/api/projects/${this.props.task.project}/tasks/${this.props.task.id}/3d/cameraview`,
+            contentType: 'application/json',
+            data: JSON.stringify(view),
+            dataType: 'json',
+            type: 'POST'
+          }).done(result => {
+            if (result.success) showOk();
+            else showError();
+          }).fail(() => {
+            showError();
+          });
+    }
+
+    render(){
+        return ([<input key="btn" type="button" onClick={this.handleClick} 
+                    style={{marginBottom: 12, display: 'inline-block'}} name="set_camera_view" 
+                    value={_("set initial camera view")} />,
+                this.state.showOk ? (<div key="ok" style={{color: 'lightgreen', display: 'inline-block', marginLeft: 12}}>✓</div>) : "",
+                this.state.error ? (<div key="error" style={{color: 'red'}}>{this.state.error}</div>) : ""
+                ]
+        );
+    }
+}
+
 class TexturedModelMenu extends React.Component{
     static propTypes = {
         toggleTexturedModel: PropTypes.func.isRequired
@@ -75,12 +126,14 @@ class CamerasMenu extends React.Component{
 class ModelView extends React.Component {
   static defaultProps = {
     task: null,
-    public: false
+    public: false,
+    shareButtons: true
   };
 
   static propTypes = {
       task: PropTypes.object.isRequired, // The object should contain two keys: {id: <taskId>, project: <projectId>}
-      public: PropTypes.bool // Is the view being displayed via a shared link?
+      public: PropTypes.bool, // Is the view being displayed via a shared link?
+      shareButtons: PropTypes.bool
   };
 
   constructor(props){
@@ -219,6 +272,17 @@ class ModelView extends React.Component {
     });
   }
 
+  getSceneData(){
+      let json = Potree.saveProject(window.viewer);
+
+      // Remove view, settings since we don't want to trigger
+      // scene updates when these change.
+      delete json.view;
+      delete json.settings;
+
+      return json;
+  }
+
   componentDidMount() {
     let container = this.container;
     if (!container) return; // Enzyme tests don't have support for all WebGL methods so we just skip this
@@ -248,6 +312,10 @@ class ModelView extends React.Component {
           $("#cameras").hide();
           $("#cameras_container").hide();
       }
+
+      const $scv = $("<div id='set-camera-view'></div>");
+      $scv.prependTo($("#scene_export").parent());
+      window.ReactDOM.render(<SetCameraView viewer={viewer} task={this.props.task} />, $scv.get(0));
     });
 
     viewer.scene.scene.add( new THREE.AmbientLight( 0x404040, 2.0 ) ); // soft white light );
@@ -272,7 +340,70 @@ class ModelView extends React.Component {
           material.size = 1;
 
           viewer.fitToScreen();
-        });     
+
+          // Load saved scene (if any)
+          $.ajax({
+              type: "GET",
+              url: `/api/projects/${this.props.task.project}/tasks/${this.props.task.id}/3d/scene`
+          }).done(sceneData => {
+            let localSceneData = Potree.saveProject(viewer);
+
+            // Check if we do not have a view set
+            // if so, just keep the current view information
+            if (!sceneData.view || !sceneData.view.position){
+                sceneData.view = localSceneData.view;
+            }
+            
+            sceneData.pointclouds = localSceneData.pointclouds;
+            sceneData.settings = localSceneData.settings;
+
+            // Load
+            Potree.loadProject(viewer, sceneData);
+
+            // Every 3 seconds, check if the scene has changed
+            // if it has, save the changes server-side
+            // Unfortunately Potree does not have reliable events
+            // for trivially detecting changes in measurements
+            let saveSceneReq = null;
+            let saveSceneInterval = null;
+            let saveSceneErrors = 0;
+            let prevSceneData = JSON.stringify(this.getSceneData());
+            
+            const postSceneData = (sceneData) => {
+                if (saveSceneReq){
+                    saveSceneReq.abort();
+                    saveSceneReq = null;
+                }
+    
+                saveSceneReq = $.ajax({
+                    url: `/api/projects/${this.props.task.project}/tasks/${this.props.task.id}/3d/scene`,
+                    contentType: 'application/json',
+                    data: sceneData,
+                    dataType: 'json',
+                    type: 'POST'
+                    }).done(result => {
+                        if (result.success){
+                            saveSceneErrors = 0;
+                            prevSceneData = sceneData;
+                        }else{
+                            console.warn("Cannot save Potree scene");
+                        }
+                    }).fail(() => {
+                        console.error("Cannot save Potree scene");
+                        if (++saveSceneErrors === 5) clearInterval(saveSceneInterval);
+                    });
+            };
+
+            const checkScene = () => {
+                const sceneData = JSON.stringify(this.getSceneData());
+                if (sceneData !== prevSceneData) postSceneData(sceneData);
+            };
+
+            saveSceneInterval = setInterval(checkScene, 3000);
+          }).fail(e => {
+            console.error("Cannot load 3D scene information", e);
+          });
+        });
     });
 
     viewer.renderer.domElement.addEventListener( 'mousedown', this.handleRenderMouseClick );
@@ -499,7 +630,7 @@ class ModelView extends React.Component {
                             direction="up" 
                             showLabel={false}
                             buttonClass="btn-secondary" />
-            {(!this.props.public) ? 
+            {(this.props.shareButtons && !this.props.public) ? 
             <ShareButton 
                 ref={(ref) => { this.shareButton = ref; }}
                 task={this.props.task} 

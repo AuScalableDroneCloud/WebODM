@@ -32,14 +32,16 @@ class Map extends React.Component {
   static defaultProps = {
     showBackground: false,
     mapType: "orthophoto",
-    public: false
+    public: false,
+    shareButtons: true
   };
 
   static propTypes = {
     showBackground: PropTypes.bool,
     tiles: PropTypes.array.isRequired,
     mapType: PropTypes.oneOf(['orthophoto', 'plant', 'dsm', 'dtm']),
-    public: PropTypes.bool
+    public: PropTypes.bool,
+    shareButtons: PropTypes.bool
   };
 
   constructor(props) {
@@ -219,11 +221,6 @@ class Map extends React.Component {
 
             // Add camera shots layer if available
             if (meta.task && meta.task.camera_shots && !this.addedCameraShots){
-                const cameraMarker = L.AwesomeMarkers.icon({
-                    icon: 'camera',
-                    markerColor: 'blue',
-                    prefix: 'fa'
-                });
 
                 const shotsLayer = new L.GeoJSON.AJAX(meta.task.camera_shots, {
                     style: function (feature) {
@@ -234,8 +231,12 @@ class Map extends React.Component {
                       }
                     },
                     pointToLayer: function (feature, latlng) {
-                      return L.marker(latlng, {
-                        icon: cameraMarker
+                      return new L.CircleMarker(latlng, {
+                        color: '#3498db',
+                        fillColor: '#3498db',
+                        fillOpacity: 0.9,
+                        radius: 10,
+                        weight: 1
                       });
                     },
                     onEachFeature: function (feature, layer) {
@@ -536,7 +537,7 @@ _('Example:'),
 
         <div className="actionButtons">
           {this.state.pluginActionButtons.map((button, i) => <div key={i}>{button}</div>)}
-          {(!this.props.public && this.state.singleTask !== null) ? 
+          {(this.props.shareButtons && !this.props.public && this.state.singleTask !== null) ? 
             <ShareButton 
               ref={(ref) => { this.shareButton = ref; }}
               task={this.state.singleTask} 

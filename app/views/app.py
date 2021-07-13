@@ -82,7 +82,8 @@ def map(request, project_pk=None, task_pk=None):
             'params': {
                 'map-items': json.dumps(mapItems),
                 'title': title,
-                'public': 'false'
+                'public': 'false',
+                'share-buttons': 'false' if settings.DESKTOP_MODE else 'true'
             }.items()
         })
 
@@ -106,7 +107,8 @@ def model_display(request, project_pk=None, task_pk=None):
             'title': title,
             'params': {
                 'task': json.dumps(task.get_model_display_params()),
-                'public': 'false'
+                'public': 'false',
+                'share-buttons': 'false' if settings.DESKTOP_MODE else 'true'
             }.items()
         })
 

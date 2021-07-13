@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from app.plugins import get_current_plugin
-from .cloud_platform import CloudPlatform
+from coreplugins.cloudimport.cloud_platform import CloudPlatform
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC

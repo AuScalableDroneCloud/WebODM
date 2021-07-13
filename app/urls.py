@@ -3,7 +3,7 @@ from django.views.i18n import JavaScriptCatalog
 from django.urls import path
 
 from .views import app as app_views, public as public_views, dev as dev_views
-from .plugins.views import app_view_handler
+from .plugins.views import app_view_handler, root_url_patterns
 
 from app.boot import boot
 from webodm import settings
@@ -48,7 +48,8 @@ urlpatterns = [
 
     # TODO: add caching: https://docs.djangoproject.com/en/3.1/topics/i18n/translation/#note-on-performance
     url(r'^jsi18n/', JavaScriptCatalog.as_view(packages=['app']), name='javascript-catalog'),
-]
+    url(r'^i18n/', include('django.conf.urls.i18n')),
+] + root_url_patterns()
 
 handler404 = app_views.handler404
 handler500 = app_views.handler500

@@ -2,8 +2,8 @@
 # Currently only tested on the AARNet CloudStor service, but should work on any webdav interface
 from urllib.parse import urlparse
 from os import path
-from plugins.cloudimport.cloud_platform import File, Folder
-from plugins.cloudimport.extensions.cloud_webdav import CloudWebDAV
+from coreplugins.cloudimport.cloud_platform import File, Folder
+from coreplugins.cloudimport.extensions.cloud_webdav import CloudWebDAV
 from app.plugins import get_current_plugin, logger
 
 class Platform(CloudWebDAV):
