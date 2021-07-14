@@ -115,7 +115,7 @@ def import_files(task_id, files, user_id, connection_details=None):
     connection = None
     if connection_details and connection_details['type'] == 'webdav':
         #Use webdav connection
-        from plugins.cloudimport.extensions.cloud_webdav import CloudWebDAV
+        from coreplugins.cloudimport.extensions.cloud_webdav import CloudWebDAV
         connection = CloudWebDAV('', '')
         connection.connect_dict(connection_details, user_id)
 
