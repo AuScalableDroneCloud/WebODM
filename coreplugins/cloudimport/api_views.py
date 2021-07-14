@@ -115,14 +115,24 @@ def import_files(task_id, files, user_id, connection_details=None):
     connection = None
     if connection_details and connection_details['type'] == 'webdav':
         #Use webdav connection
-        from coreplugins.cloudimport.extensions.cloud_webdav import CloudWebDAV
-        connection = CloudWebDAV('', '').connect_dict(connection_details, user_id)
+        from plugins.cloudimport.extensions.cloud_webdav import CloudWebDAV
+        connection = CloudWebDAV('', '')
+        connection.connect_dict(connection_details, user_id)
 
     def download_file(task, file):
         path = task.task_path(file['name'])
         if connection:
-            #Use webdav connection
-            connection.download_sync(remote_path=file['url'], local_path=path)
+            max_attempts = 10
+            for i in range(max_attempts):
+                try:
+                    connection.download(file['url'], path)
+                    break
+                except (Exception) as e:
+                    logger.error("Exception ocurred downloading file: " + file['url'] + " : " + str(e))
+                    logger.info("Attempting to re-connect...")
+                    import time
+                    time.sleep(2)
+                    connection.connect_dict(connection_details, user_id)
         else:
             download_stream = requests.get(file['url'], stream=True, timeout=60)
 
