@@ -281,7 +281,7 @@ start(){
 		echo "Will enable SSL ($method)"
 	fi
 
-	command="$command start || $command up"
+	command="$command up"
 
 	if [[ $detached = true ]]; then
 		command+=" -d"

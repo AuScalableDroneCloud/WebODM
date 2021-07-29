@@ -279,6 +279,7 @@ class ModelView extends React.Component {
       // scene updates when these change.
       delete json.view;
       delete json.settings;
+      delete json.cameraAnimations;
 
       return json;
   }
@@ -313,9 +314,11 @@ class ModelView extends React.Component {
           $("#cameras_container").hide();
       }
 
-      const $scv = $("<div id='set-camera-view'></div>");
-      $scv.prependTo($("#scene_export").parent());
-      window.ReactDOM.render(<SetCameraView viewer={viewer} task={this.props.task} />, $scv.get(0));
+      if (!this.props.public){
+          const $scv = $("<div id='set-camera-view'></div>");
+          $scv.prependTo($("#scene_export").parent());
+          window.ReactDOM.render(<SetCameraView viewer={viewer} task={this.props.task} />, $scv.get(0));
+      }
     });
 
     viewer.scene.scene.add( new THREE.AmbientLight( 0x404040, 2.0 ) ); // soft white light );
@@ -353,12 +356,14 @@ class ModelView extends React.Component {
             if (!sceneData.view || !sceneData.view.position){
                 sceneData.view = localSceneData.view;
             }
-            
-            sceneData.pointclouds = localSceneData.pointclouds;
-            sceneData.settings = localSceneData.settings;
 
+            const keepKeys = ['pointclouds', 'settings', 'cameraAnimations'];
+            for (let k of keepKeys){
+                sceneData[k] = localSceneData[k];
+            }
+            
             for (let k in localSceneData){
-                if (k !== 'pointclouds' && k !== 'settings'){
+                if (keepKeys.indexOf(k) === -1){
                     sceneData[k] = sceneData[k] || localSceneData[k];
                 }
             }
