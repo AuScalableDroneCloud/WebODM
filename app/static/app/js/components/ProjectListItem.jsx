@@ -4,10 +4,8 @@ import update from 'immutability-helper';
 import TaskList from './TaskList';
 import NewTaskPanel from './NewTaskPanel';
 import ImportTaskPanel from './ImportTaskPanel';
-import UploadProgressBar from './UploadProgressBar';
 import ErrorMessage from './ErrorMessage';
 import EditProjectDialog from './EditProjectDialog';
-import Dropzone from '../vendor/dropzone';
 import csrf from '../django/csrf';
 import HistoryNav from '../classes/HistoryNav';
 import PropTypes from 'prop-types';
@@ -35,12 +33,14 @@ class ProjectListItem extends React.Component {
       data: props.data,
       refreshing: false,
       importing: false,
+      selecting: false,
       buttons: []
     };
 
     this.toggleTaskList = this.toggleTaskList.bind(this);
     this.closeUploadError = this.closeUploadError.bind(this);
     this.cancelUpload = this.cancelUpload.bind(this);
+    this.handleTaskReview = this.handleTaskReview.bind(this);
     this.handleTaskSaved = this.handleTaskSaved.bind(this);
     this.viewMap = this.viewMap.bind(this);
     this.handleDelete = this.handleDelete.bind(this);
@@ -104,157 +104,6 @@ class ProjectListItem extends React.Component {
   }
 
   componentDidMount(){
-    Dropzone.autoDiscover = false;
-
-    if (this.hasPermission("add")){
-      this.dz = new Dropzone(this.dropzone, {
-          paramName: "images",
-          url : 'TO_BE_CHANGED',
-          parallelUploads: 6,
-          uploadMultiple: false,
-          acceptedFiles: "image/*,text/*",
-          autoProcessQueue: false,
-          createImageThumbnails: false,
-          clickable: this.uploadButton,
-          chunkSize: 2147483647,
-          timeout: 2147483647,
-          
-          headers: {
-            [csrf.header]: csrf.token
-          }
-      });
-
-      this.dz.on("addedfiles", files => {
-          let totalBytes = 0;
-          for (let i = 0; i < files.length; i++){
-              totalBytes += files[i].size;
-              files[i].deltaBytesSent = 0;
-              files[i].trackedBytesSent = 0;
-              files[i].retries = 0;
-          }
-
-          this.setUploadState({
-            editing: true,
-            totalCount: this.state.upload.totalCount + files.length,
-            files,
-            totalBytes: this.state.upload.totalBytes + totalBytes
-          });
-        })
-        .on("uploadprogress", (file, progress, bytesSent) => {
-            const now = new Date().getTime();
-
-            if (bytesSent > file.size) bytesSent = file.size;
-            
-            if (progress === 100 || now - this.state.upload.lastUpdated > 500){
-                const deltaBytesSent = bytesSent - file.deltaBytesSent;
-                file.trackedBytesSent += deltaBytesSent;
-
-                const totalBytesSent = this.state.upload.totalBytesSent + deltaBytesSent;
-                const progress = totalBytesSent / this.state.upload.totalBytes * 100;
-
-                this.setUploadState({
-                    progress,
-                    totalBytesSent,
-                    lastUpdated: now
-                });
-
-                file.deltaBytesSent = bytesSent;
-            }
-        })
-        .on("complete", (file) => {
-            // Retry
-            const retry = () => {
-                const MAX_RETRIES = 10;
-
-                if (file.retries < MAX_RETRIES){
-                    // Update progress
-                    const totalBytesSent = this.state.upload.totalBytesSent - file.trackedBytesSent;
-                    const progress = totalBytesSent / this.state.upload.totalBytes * 100;
-        
-                    this.setUploadState({
-                        progress,
-                        totalBytesSent,
-                    });
-        
-                    file.status = Dropzone.QUEUED;
-                    file.deltaBytesSent = 0;
-                    file.trackedBytesSent = 0;
-                    file.retries++;
-                    this.dz.processQueue();
-                }else{
-                    throw new Error(interpolate(_('Cannot upload %(filename)s, exceeded max retries (%(max_retries)s)'), {filename: file.name, max_retries: MAX_RETRIES}));
-                }
-            };
-
-            try{
-                if (file.status === "error"){
-                    retry();
-                }else{
-                    // Check response
-                    let response = JSON.parse(file.xhr.response);
-                    if (response.success){
-                        // Update progress by removing the tracked progress and 
-                        // use the file size as the true number of bytes
-                        let totalBytesSent = this.state.upload.totalBytesSent + file.size;
-                        if (file.trackedBytesSent) totalBytesSent -= file.trackedBytesSent;
-        
-                        const progress = totalBytesSent / this.state.upload.totalBytes * 100;
-        
-                        this.setUploadState({
-                            progress,
-                            totalBytesSent,
-                            uploadedCount: this.state.upload.uploadedCount + 1
-                        });
-
-                        this.dz.processQueue();
-                    }else{
-                        retry();
-                    }
-                }
-            }catch(e){
-                this.setUploadState({error: `${e.message}`, uploading: false});
-                this.dz.cancelUpload();
-            }
-        })
-        .on("queuecomplete", () => {
-            const remainingFilesCount = this.state.upload.totalCount - this.state.upload.uploadedCount;
-            if (remainingFilesCount === 0){
-                // All files have uploaded!
-                this.setUploadState({uploading: false});
-
-                $.ajax({
-                    url: `/api/projects/${this.state.data.id}/tasks/${this.dz._taskInfo.id}/commit/`,
-                    contentType: 'application/json',
-                    dataType: 'json',
-                    type: 'POST'
-                  }).done((task) => {
-                    if (task && task.id){
-                        this.newTaskAdded();
-                    }else{
-                        this.setUploadState({error: interpolate(_('Cannot create new task. Invalid response from server: %(error)s'), { error: JSON.stringify(task) }) });
-                    }
-                  }).fail(() => {
-                    this.setUploadState({error: _("Cannot create new task. Please try again later.")});
-                  });
-            }else if (this.dz.getQueuedFiles() === 0){
-                // Done but didn't upload all?
-                this.setUploadState({
-                    totalCount: this.state.upload.totalCount - remainingFilesCount,
-                    uploading: false,
-                    error: interpolate(_('%(count)s files cannot be uploaded. As a reminder, only images (.jpg, .tif, .png) and GCP files (.txt) can be uploaded. Try again.'), { count: remainingFilesCount })
-                });
-            }
-        })
-        .on("reset", () => {
-          this.resetUploadState();
-        })
-        .on("dragenter", () => {
-          if (!this.state.upload.editing){
-            this.resetUploadState();
-          }
-        });
-    }
-    
     PluginsAPI.Dashboard.triggerAddNewTaskButton({projectId: this.state.data.id, onNewTaskAdded: this.newTaskAdded}, (button) => {
         if (!button) return;
 
@@ -262,6 +111,18 @@ class ProjectListItem extends React.Component {
             buttons: {$push: [button]}
         }));
     });
+  }
+
+  uploadCompleted = (files) => {
+    /* Uploads completed by uppy, NOTE: task does not exist until saved (start processing pressed) */
+
+    let totalBytes = 0;
+    for (let i = 0; i < files.length; i++)
+      totalBytes += files[i].size;
+    console.log("Upload completed: ", files.length, files, " TotalBytes: " + totalBytes);
+
+    /* Store the files on the upload.files object */
+    this.setUploadState({uploading: false, files: files, progress: 100, totalCount: files.length, totalBytes: totalBytes, totalBytesSent: totalBytes});
   }
 
   newTaskAdded = () => {
@@ -297,7 +158,6 @@ class ProjectListItem extends React.Component {
   }
 
   cancelUpload(e){
-    this.dz.removeAllFiles(true);
   }
 
   taskDeleted(){
@@ -313,8 +173,16 @@ class ProjectListItem extends React.Component {
         });
   }
 
+
+  handleTaskReview(){
+    this.setState({selecting: false});
+  }
+
   handleTaskSaved(taskInfo){
-    this.dz._taskInfo = taskInfo; // Allow us to access the task info from dz
+    /* Task saved - [Start Processing] button pressed
+     * Need to get the files from the tusd server
+     * either transfer them or have them stored in object storage
+     */
 
     this.setUploadState({uploading: true, editing: false});
 
@@ -339,9 +207,8 @@ class ProjectListItem extends React.Component {
         type: 'POST'
       }).done((task) => {
         if (task && task.id){
-            this.dz._taskInfo.id = task.id;
-            this.dz.options.url = `/api/projects/${this.state.data.id}/tasks/${task.id}/upload/`;
-            this.dz.processQueue();
+            //Process all the uploaded files and add them to the database
+            this.submitUpload(task);
         }else{
             this.setState({error: interpolate(_('Cannot create new task. Invalid response from server: %(error)s'), { error: JSON.stringify(task) }) });
             this.handleTaskCanceled();
@@ -353,7 +220,7 @@ class ProjectListItem extends React.Component {
   }
 
   handleTaskCanceled = () => {
-    this.dz.removeAllFiles(true);
+    this.setState({selecting: false});
     this.resetUploadState();
   }
 
@@ -362,10 +229,49 @@ class ProjectListItem extends React.Component {
     if (!this.state.upload.editing){
       this.handleTaskCanceled();
     }
+
+    this.setUploadState({
+      editing: true,
+    });
+
+    //Re-open uploads box
+    this.setState({selecting: true});
   }
 
   handleEditProject(){
     this.editProjectDialog.show();
+  }
+
+  submitUpload(task){
+    //Uploading files finished and task submitted/created
+    // - send the file url list via /uploaded api endpoint
+    // - commit the task, begins processing
+    $.ajax({
+        url: `/api/projects/${this.state.data.id}/tasks/${task.id}/uploaded/`,
+        contentType: 'application/json',
+        data: JSON.stringify(this.state.upload.files),
+        dataType: 'json',
+        type: 'POST'
+      }).done(() => {
+        //this.refresh();
+        console.log("Submitted uploaded file list...");
+
+        //Commit the task
+        $.ajax({
+            url: `/api/projects/${this.state.data.id}/tasks/${task.id}/commit/`,
+            contentType: 'application/json',
+            dataType: 'json',
+            type: 'POST'
+          }).done((task) => {
+            if (task && task.id){
+                this.newTaskAdded();
+            }else{
+                this.setUploadState({error: interpolate(_('Cannot create new task. Invalid response from server: %(error)s'), { error: JSON.stringify(task) }) });
+            }
+          }).fail(() => {
+            this.setUploadState({error: _("Cannot create new task. Please try again later.")});
+          });
+      });
   }
 
   updateProject(project){
@@ -396,36 +302,44 @@ class ProjectListItem extends React.Component {
   }
 
   handleTaskTitleHint = () => {
-      return new Promise((resolve, reject) => {
-          if (this.state.upload.files.length > 0){
 
-              // Find first image in list
-              let f = null;
-              for (let i = 0; i < this.state.upload.files.length; i++){
-                  if (this.state.upload.files[i].type.indexOf("image") === 0){
-                      f = this.state.upload.files[i];
-                      break;
-                  }
-              }
+      return new Promise((resolve, reject) => {
+
+          // Find first image in list
+          let f = null;
+          for (let i = 0; i < this.state.upload.files.length; i++){
+            if (this.state.upload.files[i].type.indexOf("image") === 0){
+                f = this.state.upload.files[i];
+                break;
+            }
+          }
+
+          if (f === null) {
+            //Signal still waiting for valid image upload to generate suggestion
+            resolve('');
+          } else {
+
+              //if (!f && this.state.upload.files.length > 1){
               if (!f){
                   reject();
                   return;
               }
+
+              //Use URL if provided instead of filename
+              if (f["uploadURL"])
+                f = f["uploadURL"];
               
               // Parse EXIF
+              console.log("EXIF parse: " + f);
               const options = {
                 ifd0: false,
-                exif: [0x9003],
+                exif: [0x9003], //0x9003 = 'DateTimeOriginal'
                 gps: [0x0001, 0x0002, 0x0003, 0x0004],
                 interop: false,
                 ifd1: false // thumbnail
               };
+              console.log("EXIF parse2: " + JSON.stringify(options));
               exifr.parse(f, options).then(gps => {
-                if (!gps.latitude || !gps.longitude){
-                    reject();
-                    return;
-                }
-
                 let dateTime = gps["36867"];
 
                 // Try to parse the date from EXIF to JS
@@ -438,21 +352,34 @@ class ProjectListItem extends React.Component {
                         dateTime = new Date(tm).toLocaleDateString();
                     }
                 }
+
+                console.log("EXIF parsed: " + JSON.stringify(gps));
                 
                 // Fallback to file modified date if 
                 // no exif info is available
                 if (!dateTime) dateTime = f.lastModifiedDate.toLocaleDateString();
 
-                // Query nominatim OSM
-                $.ajax({
-                    url: `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${gps.latitude}&lon=${gps.longitude}`,
-                    contentType: 'application/json',
-                    type: 'GET'
-                }).done(json => {
-                    if (json.name) resolve(`${json.name} - ${dateTime}`);
-                    else if (json.address && json.address.road) resolve(`${json.address.road} - ${dateTime}`);
-                    else reject(new Error("Invalid json"));
-                }).fail(reject);
+                if (!gps.latitude || !gps.longitude){
+                    //reject();
+                    //Use date/time from exif
+                    dateTime = gps[0x9003];
+                    if (!dateTime) dateTime = f.lastModifiedDate.toLocaleDateString();
+                    resolve(`Unknown Location - ${dateTime}`);
+                } else {
+                    // Query nominatim OSM
+                    $.ajax({
+                        url: `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${gps.latitude}&lon=${gps.longitude}`,
+                        contentType: 'application/json',
+                        type: 'GET'
+                    }).done(json => {
+                        console.log("EXIF GPS parsed: " + JSON.stringify(json));
+                        if (json.name) resolve(`${json.name} - ${dateTime}`);
+                        else if (json.display_name) resolve(`${json.display_name} - ${dateTime}`);
+                        else if (json.address && json.address.road) resolve(`${json.address.road} - ${dateTime}`);
+                        else if (json.address && json.address.village) resolve(`${json.address.village} - ${dateTime}`);
+                        else reject(new Error("Invalid json"));
+                    }).fail(reject);
+                }
               }).catch(reject);
           }
       });
@@ -485,12 +412,13 @@ class ProjectListItem extends React.Component {
           <div className="btn-group pull-right">
             {this.hasPermission("add") ? 
               <div className={"asset-download-buttons btn-group " + (this.state.upload.uploading ? "hide" : "")}>
-                <button type="button" 
+                <button
+                      type="button"
                       className="btn btn-primary btn-sm"
                       onClick={this.handleUpload}
                       ref={this.setRef("uploadButton")}>
                   <i className="glyphicon glyphicon-upload"></i>
-                  {_("Select Images and GCP")}
+                  {_("Upload Images and GCP")}
                 </button>
                 <button type="button" 
                       className="btn btn-default btn-sm"
@@ -537,23 +465,17 @@ class ProjectListItem extends React.Component {
         </div>
         <i className="drag-drop-icon fa fa-inbox"></i>
         <div className="row">
-          {this.state.upload.uploading ? <UploadProgressBar {...this.state.upload}/> : ""}
-          
-          {this.state.upload.error !== "" ? 
-            <div className="alert alert-warning alert-dismissible">
-                <button type="button" className="close" title={_("Close")} onClick={this.closeUploadError}><span aria-hidden="true">&times;</span></button>
-                {this.state.upload.error}
-            </div>
-            : ""}
-
           {this.state.upload.editing ? 
             <NewTaskPanel
+              onReview={this.handleTaskReview}
               onSave={this.handleTaskSaved}
               onCancel={this.handleTaskCanceled}
               suggestedTaskName={this.handleTaskTitleHint}
               filesCount={this.state.upload.totalCount}
               showResize={true}
               getFiles={() => this.state.upload.files }
+              onCompleted={this.uploadCompleted}
+              selecting={this.state.selecting}
             />
           : ""}
 

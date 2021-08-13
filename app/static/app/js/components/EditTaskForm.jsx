@@ -48,7 +48,7 @@ class EditTaskForm extends React.Component {
 
       editingPreset: false,
 
-      loadingTaskName: false
+      loadingTaskName: true
     };
 
     this.handleNameChange = this.handleNameChange.bind(this);
@@ -272,13 +272,15 @@ class EditTaskForm extends React.Component {
   }
 
   loadSuggestedName = () => {
-    if (typeof this.props.suggestedTaskName === "function"){
-        this.setState({loadingTaskName: true});
-
+    if (typeof this.props.suggestedTaskName === "function") {
         this.props.suggestedTaskName().then(name => {
             if (this.state.loadingTaskName){
+              //Still waiting for image upload
+              if (name === '')
+                setTimeout(this.loadSuggestedName.bind(this), 1000);
+              else
                 this.setState({loadingTaskName: false, name});
-            }else{
+            } else {
                 // User started typing its own name
             }
         }).catch(e => {
@@ -565,10 +567,11 @@ class EditTaskForm extends React.Component {
           <div className="form-group form-inline">
             <label className="col-sm-2 control-label">{_("Options")}</label>
             <div className="col-sm-10">
-              {!this.props.inReview ? optionsSelector : 
-               <div className="review-options">
+              {optionsSelector}
+              <div className="review-options">
                 {this.getAvailableOptionsOnlyText(this.state.selectedPreset.options, this.state.selectedNode.options)}
-               </div>}
+              </div>
+
             </div>
           </div>
 

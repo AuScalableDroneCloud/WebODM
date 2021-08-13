@@ -609,7 +609,7 @@ class TaskListItem extends React.Component {
       let progress = 100;
       let type = 'done';
 
-      if (task.pending_action === pendingActions.RESIZE){
+      if (task.pending_action === pendingActions.RESIZE || task.pending_action === pendingActions.PULL){
           progress = task.resize_progress * 100;
       }else if (task.status === null){
           progress = task.upload_progress * 100;

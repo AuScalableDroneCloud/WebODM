@@ -77,7 +77,48 @@ def validate_task_options(value):
     except:
         raise ValidationError("Invalid options")
 
+def pull_image(image, task_folder, done=None):
+    """
+    Retrieve uploaded image from staging area to local disk
+    """
+    #Default to local image stored by pathname
+    retval = image.path()
+    try:
+        if not os.path.exists(task_folder):
+            logger.warning("Project folder {} for task doesn't exist, this doesn't look right, so we will not retrieve any files.".format(task_folder))
+            return []
+        logger.info("Found task folder {}".format(task_folder))
 
+        import io
+        import json
+        image_list = []
+
+        #Stored as upload URL instead of local path with original filename after #
+        logger.info("Pulling image, name: {}".format(image.image.name))
+        uploadURL, filename = image.image.name.rsplit('#', 1)
+
+        logger.info("- orig filename {} source url {} ".format(filename, uploadURL))
+        #Download from upload server if doesn't exist
+        fp = os.path.join(task_folder, filename)
+        if not os.path.exists(fp):
+            logger.info("- downloading to {}".format(fp))
+            try:
+                download_stream = requests.get(uploadURL, stream=True, timeout=60)
+                with open(fp, 'wb') as fd:
+                    for chunk in download_stream.iter_content(4096):
+                        fd.write(chunk)
+                #Return the downoad dest path
+                retval = fp
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                logger.warning("Error downloading image {} from {}".format(filename, uploadURL))
+
+    except Exception  as e:
+        logger.warning("Failed to pull image for task. We're going to proceed anyway, but you might experience issues: {}".format(e))
+
+    if done is not None:
+        done(retval)
+
+    return retval
 
 def resize_image(image_path, resize_to, done=None):
     """
@@ -211,6 +252,7 @@ class Task(models.Model):
         (pending_actions.RESTART, 'RESTART'),
         (pending_actions.RESIZE, 'RESIZE'),
         (pending_actions.IMPORT, 'IMPORT'),
+        (pending_actions.PULL, 'PULL'),
     )
 
     TASK_PROGRESS_LAST_VALUE = 0.85
@@ -271,6 +313,47 @@ class Task(models.Model):
         name = self.name if self.name is not None else gettext("unnamed")
 
         return 'Task [{}] ({})'.format(name, self.id)
+
+    def pull_images(self):
+        """
+        Retrieve uploaded images from staging area to local disk
+        """
+        task_folder = full_task_directory_path(self.id, self.project_id)
+
+        #images_path = self.find_all_files_matching(r'.*\.(jpe?g|tiff?)$')
+        images_set = self.imageupload_set.all()
+        #images_set = [img.image.name for img in self.imageupload_set.all()]
+        total_images = len(images_set)
+        pulled_images_count = 0
+        last_update = 0
+
+        def callback(retval=None):
+            nonlocal last_update
+            nonlocal pulled_images_count
+            nonlocal total_images
+
+            pulled_images_count += 1
+            if time.time() - last_update >= 2:
+                # Update progress (just use the resize progress for now so we don't need to add a new model field)
+                Task.objects.filter(pk=self.id).update(resize_progress=(float(pulled_images_count) / float(total_images)))
+                self.check_if_canceled()
+                last_update = time.time()
+
+        pulled_images = list(map(partial(pull_image, task_folder=task_folder, done=callback), images_set))
+
+        #Replace the staging urls in db with local paths
+        with transaction.atomic(): #Required for db updates
+            for i,img in enumerate(images_set):
+                #Update keys - replace with local path to file
+                prev_name = img.image.name
+                if prev_name != pulled_images[i]:
+                    img.image.name = pulled_images[i]
+                    logger.info("Changing {} to {}".format(prev_name, img.image.name))
+                    img.save()
+
+        Task.objects.filter(pk=self.id).update(resize_progress=1.0)
+
+        return pulled_images
 
     def move_assets(self, old_project_id, new_project_id):
         """
@@ -467,6 +550,15 @@ class Task(models.Model):
             if self.pending_action == pending_actions.IMPORT:
                 self.handle_import()
 
+            if self.pending_action == pending_actions.PULL:
+                #Retrieve uploaded images from staging area to local disk
+                images = self.pull_images()
+                if self.resize_to:
+                    self.pending_action = pending_actions.RESIZE
+                else:
+                    self.pending_action = None
+                self.save()
+
             if self.pending_action == pending_actions.RESIZE:
                 resized_images = self.resize_images()
                 self.refresh_from_db()
@@ -511,8 +603,6 @@ class Task(models.Model):
                 # Need to process some images (UUID not yet set and task doesn't have pending actions)?
                 if not self.uuid and self.pending_action is None and self.status is None:
                     logger.info("Processing... {}".format(self))
-
-                    images = [image.path() for image in self.imageupload_set.all()]
 
                     # Track upload progress, but limit the number of DB updates
                     # to every 2 seconds (and always record the 100% progress)
@@ -858,8 +948,7 @@ class Task(models.Model):
         from app.plugins import signals as plugin_signals
         plugin_signals.task_removing.send_robust(sender=self.__class__, task_id=task_id)
 
-        directory_to_delete = os.path.join(settings.MEDIA_ROOT,
-                                           task_directory_path(self.id, self.project.id))
+        directory_to_delete = full_task_directory_path(self.id, self.project.id)
 
         super(Task, self).delete(using, keep_parents)
 
