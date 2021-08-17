@@ -32,6 +32,7 @@ services:
       - WO_DEBUG
       - WO_BROKER
       - WO_DEV
+      - WO_DEV_WATCH_PLUGINS
       - WO_AUTH0_DOMAIN
       - WO_AUTH0_KEY
       - WO_AUTH0_SECRET
