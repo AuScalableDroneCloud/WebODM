@@ -28,7 +28,12 @@ if [ $? -eq 0 ]; then
 fi
 
 # Generate/update certificate
-certbot certonly --http-01-port 8080 --work-dir ./letsencrypt --config-dir ./letsencrypt --logs-dir ./letsencrypt --standalone -d $DOMAIN --register-unsafely-without-email --agree-tos --keep
+CONTACT_EMAIL_ARGS="--register-unsafely-without-email"
+if [ ! -z $WO_CONTACT_EMAIL ]; then
+  CONTACT_EMAIL_ARGS="-m ${WO_CONTACT_EMAIL}"
+fi
+
+certbot certonly --http-01-port 8080 --work-dir ./letsencrypt --config-dir ./letsencrypt --logs-dir ./letsencrypt --standalone -d $DOMAIN $CONTACT_EMAIL_ARGS --agree-tos --keep
 
 # Create ssl dir if necessary
 if [ ! -e ssl/ ]; then
