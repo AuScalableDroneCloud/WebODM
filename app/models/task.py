@@ -622,6 +622,7 @@ class Task(models.Model):
             if self.pending_action == pending_actions.IMPORT:
                 self.handle_import()
 
+            images = None
             if self.pending_action == pending_actions.PULL:
                 #Retrieve uploaded images from staging area to local disk
                 images = self.pull_images()
@@ -630,8 +631,6 @@ class Task(models.Model):
                 else:
                     self.pending_action = None
                 self.save()
-            else:
-                images = [image.path() for image in self.imageupload_set.all()]
 
             if self.pending_action == pending_actions.RESIZE:
                 resized_images = self.resize_images()
@@ -677,6 +676,9 @@ class Task(models.Model):
                 # Need to process some images (UUID not yet set and task doesn't have pending actions)?
                 if not self.uuid and self.pending_action is None and self.status is None:
                     logger.info("Processing... {}".format(self))
+
+                    if images is None:
+                        images = self.pull_images()
 
                     # Track upload progress, but limit the number of DB updates
                     # to every 2 seconds (and always record the 100% progress)
