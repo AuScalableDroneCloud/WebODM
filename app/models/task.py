@@ -630,6 +630,8 @@ class Task(models.Model):
                 else:
                     self.pending_action = None
                 self.save()
+            else:
+                images = [image.path() for image in self.imageupload_set.all()]
 
             if self.pending_action == pending_actions.RESIZE:
                 resized_images = self.resize_images()
