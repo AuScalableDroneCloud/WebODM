@@ -362,6 +362,7 @@ class TestApiTask(BootTransactionTestCase):
             # Can download assets
             for asset in list(task.ASSETS_MAP.keys()):
                 res = client.get("/api/projects/{}/tasks/{}/download/{}".format(project.id, task.id, asset))
+                print("DOWLOAD: " + asset)
                 self.assertEqual(res.status_code, status.HTTP_200_OK)
 
             # We can stream downloads
@@ -414,6 +415,14 @@ class TestApiTask(BootTransactionTestCase):
                 self.assertEqual(i.height, 3)
 
             res = client.get("/api/projects/{}/tasks/{}/images/thumbnail/tiny_drone_image.jpg?size=9999999".format(project.id, task.id))
+            self.assertTrue(res.status_code == status.HTTP_200_OK)
+            with Image.open(io.BytesIO(res.content)) as i:
+                # Thumbnail has been resized to the max allowed (oringinal image size)
+                self.assertEqual(i.width, 48)
+                self.assertEqual(i.height, 36)
+
+            # Can plot points, recenter thumbnails, zoom
+            res = client.get("/api/projects/{}/tasks/{}/images/thumbnail/tiny_drone_image.jpg?size=9999999&center_x=0.3&center_y=0.2&draw_point=0.4,0.4&point_color=ff0000&point_radius=3&zoom=2".format(project.id, task.id))
             self.assertTrue(res.status_code == status.HTTP_200_OK)
             with Image.open(io.BytesIO(res.content)) as i:
                 # Thumbnail has been resized to the max allowed (oringinal image size)
@@ -475,8 +484,8 @@ class TestApiTask(BootTransactionTestCase):
             for f in fields:
                 self.assertTrue(f in metadata)
 
-            self.assertEqual(metadata['minzoom'], 17 - ZOOM_EXTRA_LEVELS)
-            self.assertEqual(metadata['maxzoom'], 17 + ZOOM_EXTRA_LEVELS)
+            self.assertEqual(metadata['minzoom'], 18 - ZOOM_EXTRA_LEVELS)
+            self.assertEqual(metadata['maxzoom'], 18 + ZOOM_EXTRA_LEVELS)
 
             # Colormaps and algorithms should be empty lists
             self.assertEqual(metadata['algorithms'], [])
@@ -566,8 +575,8 @@ class TestApiTask(BootTransactionTestCase):
 
                 # Min/max values are what we expect them to be
                 self.assertEqual(len(metadata['statistics']), 1)
-                self.assertEqual(round(metadata['statistics']['1']['min'], 2), 156.92)
-                self.assertEqual(round(metadata['statistics']['1']['max'], 2), 164.88)
+                self.assertEqual(round(metadata['statistics']['1']['min'], 2), 156.91)
+                self.assertEqual(round(metadata['statistics']['1']['max'], 2), 164.94)
 
             # Can access individual tiles
             for tile_type in tile_types:
@@ -651,6 +660,11 @@ class TestApiTask(BootTransactionTestCase):
                 ("orthophoto", "formula=NDVI&bands=RGN&color_map=rdylgn&rescale=1,-1", status.HTTP_200_OK),
 
                 ("orthophoto", "formula=NDVI&bands=RGN&color_map=invalid", status.HTTP_400_BAD_REQUEST),
+
+                ("orthophoto", "boundaries=invalid", status.HTTP_400_BAD_REQUEST),
+                ("orthophoto", "boundaries=%7B%22a%22%3A%20true%7D", status.HTTP_400_BAD_REQUEST),
+                
+                ("orthophoto", "boundaries=%7B%22type%22%3A%22Feature%22%2C%22properties%22%3A%7B%22Length%22%3A52.98642774268887%2C%22Area%22%3A139.71740455567166%7D%2C%22geometry%22%3A%7B%22type%22%3A%22Polygon%22%2C%22coordinates%22%3A%5B%5B%5B-91.993925%2C46.842686%5D%2C%5B-91.993928%2C46.842756%5D%2C%5B-91.994024%2C46.84276%5D%2C%5B-91.994018%2C46.842582%5D%2C%5B-91.993928%2C46.842585%5D%2C%5B-91.993925%2C46.842686%5D%5D%5D%7D%7D", status.HTTP_200_OK)
             ]
 
             for k in algos:

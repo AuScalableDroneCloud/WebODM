@@ -99,3 +99,7 @@ package-lock.json
 .initialized
 .vscode/
 .DS_Store
+
+# Debian builds
+dpkg/build
+dpkg/deb
