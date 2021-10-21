@@ -622,7 +622,6 @@ class Task(models.Model):
             if self.pending_action == pending_actions.IMPORT:
                 self.handle_import()
 
-            images = None
             if self.pending_action == pending_actions.PULL:
                 #Retrieve uploaded images from staging area to local disk
                 images = self.pull_images()
@@ -677,8 +676,12 @@ class Task(models.Model):
                 if not self.uuid and self.pending_action is None and self.status is None:
                     logger.info("Processing... {}".format(self))
 
-                    if images is None:
-                        images = self.pull_images()
+                    images = [image.path() for image in self.imageupload_set.all()]
+
+                    #Check for urls remaining in image paths
+                    if any(image[0:4] == "http" in image for image in images):
+                        self.pending_action = pending_actions.PULL
+                        return self.process()
 
                     # Track upload progress, but limit the number of DB updates
                     # to every 2 seconds (and always record the 100% progress)
