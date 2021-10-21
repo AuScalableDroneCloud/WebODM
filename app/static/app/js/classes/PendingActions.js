@@ -24,7 +24,7 @@ let pendingActions = {
       descr: _("Importing...")
     },
     [PULL]: {
-      descr: _("Transferring images...")
+      descr: _("Pull dataset...")
     }
 };
 
