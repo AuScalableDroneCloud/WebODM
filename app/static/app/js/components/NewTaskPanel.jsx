@@ -103,8 +103,7 @@ class NewTaskPanel extends React.Component {
       .use(GoogleDrive, {companionUrl: 'https://companion.uppy.io'})
       .use(Dropbox, {companionUrl: 'https://companion.uppy.io'})
       .use(OneDrive, {companionUrl: 'https://companion.uppy.io'})
-      .use(Tus, {endpoint: 'https://asdc.cloud.edu.au/files/'});
-      //.use(Tus, {endpoint: 'http://tusd.asdc.cloud.edu.au/files/'});
+      .use(Tus, {endpoint: 'https://asdc.cloud.edu.au/files/'})
       //.use(XHRUpload, {endpoint: `/api/projects/${this.state.data.id}/tasks/${this.state.taskInfo.id}/upload/`})
 
     this.save = this.save.bind(this);
@@ -222,7 +221,7 @@ class NewTaskPanel extends React.Component {
                 width="100%"
                 //thumbnailWidth="100" //broken
                 note="Images files and GCP.txt only"
-                plugins={['Webcam', 'Url', 'GoogleDrive', 'Dropbox', 'OneDrive', 'Tus']} //, 'XHRUpload']}
+                plugins={['Webcam', 'Url', 'GoogleDrive', 'Dropbox', 'OneDrive']}
                 fileManagerSelectionType='both'
               />
             : ""}
