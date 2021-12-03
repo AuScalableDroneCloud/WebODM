@@ -56,8 +56,8 @@ class NewTaskPanel extends React.Component {
       items: [], // Coming from plugins,
       taskInfo: {},
       loading: false,
-      filesCount: 0,
-      files: []
+      filesCount: props.filesCount,
+      files: props.files
     };
 
     this.uppy = null;
