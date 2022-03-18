@@ -14,11 +14,12 @@ class DynamicForm(forms.Form):
     """This dynamic form will go through all the extended platforms, and retrieve their fields"""
     def __init__(self, *args, **kwargs):
         ds = kwargs.pop('data_store')
+        user_id = kwargs.pop('user_id')
         super(DynamicForm, self).__init__(*args, **kwargs)
         extended_platforms = get_all_extended_platforms()
         
         for platform in extended_platforms:
-            for form_field in platform.get_form_fields():
+            for form_field in platform.get_form_fields(user_id):
                 django_field = form_field.get_django_field(ds)
                 django_field.group = platform.name
                 self.fields[form_field.field_id] = django_field
@@ -30,16 +31,16 @@ def HomeView(plugin):
 
         # if this is a POST request we need to process the form data
         if request.method == "POST":
-            form = DynamicForm(request.POST, data_store = ds)
+            form = DynamicForm(request.POST, data_store = ds, user_id = request.user.id)
             if form.is_valid():
                 extended_platforms = get_all_extended_platforms()
                 for platform in extended_platforms:
-                    for form_field in platform.get_form_fields():
+                    for form_field in platform.get_form_fields(request.user.id):
                         form_field.save_value(ds, form)
                     
                 messages.success(request, "Configuration updated successfuly!")
         else:
-            form = DynamicForm(data_store = ds)
+            form = DynamicForm(data_store = ds, user_id = request.user.id)
 
         return render(
             request,

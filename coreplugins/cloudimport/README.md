@@ -28,16 +28,16 @@ Some of the platforms described above might need some configuration. For example
 If you would like to add support for new platforms, please don't hesitate to do so! Here are a few simple guidelines that might help you in your quest.
 
 #### New Platforms
-If you simply need to add a new platform, then add your new Python script to `WebODM/plugins/cloudimport/platforms`. You can copy an already existing platform file, or you can check the file `WebODM/plugins/cloudimport/cloud_platform.py` to see what you need to implement.
+If you simply need to add a new platform, then add your new Python script to `WebODM/coreplugins/cloudimport/platforms`. You can copy an already existing platform file, or you can check the file `WebODM/coreplugins/cloudimport/cloud_platform.py` to see what you need to implement.
 
 #### New Extensions
-Now, if you want to add some more complex logic that requieres user configuration or something like that, you might need to write a **platform extension**. You will need to add your extension to `WebODM/plugins/cloudimport/extensions`. You can copy an already existing extension, or you can check the file `WebODM/plugins/cloudimport/platform_extension.py` to see what you need to implement.
+Now, if you want to add some more complex logic that requires user configuration or something like that, you might need to write a **platform extension**. You will need to add your extension to `WebODM/coreplugins/cloudimport/extensions`. You can copy an already existing extension, or you can check the file `WebODM/coreplugins/cloudimport/platform_extension.py` to see what you need to implement.
 
 #### Known Gaps
 Now, there are a few known gaps to the system that you might encounter or that you might enjoy closing.
 1. **Allow image resizing**:
 	Currently, when importing a folder, image resizing is not allowed. This might be a problem for users without a lot of disk space, so it might make sense to fix this.
 1. **Allow potential pagination when calling APIs**
-	Currently, the workflow doesn't support calling APIs that requiere pagination.
+	Currently, the workflow doesn't support calling APIs that require pagination.
 1. **Make platform extensions have their own js, like WebODM plugins**
 	Currently, when a platform extension requires their own Javascript code, you will need to add this code manually to the already existing code. It would be much easier if this was handed automatically, like the other parts of the add-on.

@@ -4,7 +4,8 @@ const CANCEL = 1,
       REMOVE = 2,
       RESTART = 3,
       RESIZE = 4,
-      IMPORT = 5;
+      IMPORT = 5,
+      PULL = 6;
 
 let pendingActions = {
     [CANCEL]: {
@@ -21,6 +22,9 @@ let pendingActions = {
     },
     [IMPORT]: {
       descr: _("Importing...")
+    },
+    [PULL]: {
+      descr: _("Pull dataset...")
     }
 };
 
@@ -30,6 +34,7 @@ export default {
     RESTART: RESTART,
     RESIZE: RESIZE,
     IMPORT: IMPORT,
+    PULL: PULL,
 
     description: function(pendingAction) {
       if (pendingActions[pendingAction]) return pendingActions[pendingAction].descr;

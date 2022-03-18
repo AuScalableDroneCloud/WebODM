@@ -2,6 +2,7 @@ from app.plugins import PluginBase, Menu, MountPoint
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.utils.translation import gettext as _
+from webodm import settings
 
 import json, shutil
 
@@ -39,7 +40,7 @@ class Plugin(PluginBase):
         @login_required
         def diagnostic(request):
             # Disk space
-            total_disk_space, used_disk_space, free_disk_space = shutil.disk_usage('./')
+            total_disk_space, used_disk_space, free_disk_space = shutil.disk_usage(settings.MEDIA_ROOT)
 
             template_args = {
                 'title': 'Diagnostic',

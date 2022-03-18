@@ -19,15 +19,12 @@ class Platform(CloudLibrary):
         parse_result = urlparse(url)
         paths = parse_result.query.split('/')
         if not 'category' in paths or paths.index('category') >= len(paths) - 1:
-            raise Exception('Wrong URL format')
+            raise Exception('Wrong URL format: ' + url)
         else:
+            import re
             category_id = paths[paths.index('category') + 1]
-            path = parse_result.path
-            if not 'index.php' in path:
-                 raise Exception('Wrong URL format')
-            
-            path = path[0:path.index('index.php')]
-            server = parse_result.scheme + '://' + parse_result.netloc + '/' + path
+            category_id = int(re.compile("(\d+)").match(category_id).group(1))
+            server = parse_result.scheme + '://' + parse_result.netloc + '/' #+ path
             return [server, category_id]
 
     def build_folder_api_url(self, information):
@@ -54,7 +51,7 @@ class Platform(CloudLibrary):
         return file
     
     # Cloud Library
-    def build_folder_list_api_url(self, server_url):
+    def build_folder_list_api_url(self, server_url, root):
         return '{}/ws.php?format=json&method=pwg.categories.getList&recursive=true&tree_output=true'.format(server_url)
   
     def parse_payload_into_folders(self, payload):

@@ -1,5 +1,6 @@
 from django.conf.urls import url, include
 from django.views.i18n import JavaScriptCatalog
+from django.urls import path
 
 from .views import app as app_views, public as public_views, dev as dev_views
 from .plugins.views import app_view_handler, root_url_patterns
@@ -23,6 +24,9 @@ urlpatterns = [
     url(r'^$', app_views.index, name='index'),
     url(r'^welcome/$', app_views.welcome, name='welcome'),
     url(r'^dashboard/$', app_views.dashboard, name='dashboard'),
+    url(r'^logout/$', app_views.logout, name='logout'),
+    path("", include("django.contrib.auth.urls")),
+    path("", include("social_django.urls")),
     url(r'^map/project/(?P<project_pk>[^/.]+)/task/(?P<task_pk>[^/.]+)/$', app_views.map, name='map'),
     url(r'^map/project/(?P<project_pk>[^/.]+)/$', app_views.map, name='map'),
     url(r'^3d/project/(?P<project_pk>[^/.]+)/task/(?P<task_pk>[^/.]+)/$', app_views.model_display, name='model_display'),

@@ -217,6 +217,33 @@ class TaskViewSet(viewsets.ViewSet):
         return Response({'success': True}, status=status.HTTP_200_OK)
 
     @detail_route(methods=['post'])
+    def uploaded(self, request, pk=None, project_pk=None):
+        """
+        Add images to a task that have already been uploaded via tusd (eg: to S3 object storage)
+        """
+        get_and_check_project(request, project_pk, ('change_project', ))
+        try:
+            task = self.queryset.get(pk=pk, project=project_pk)
+        except (ObjectDoesNotExist, ValidationError):
+            raise exceptions.NotFound()
+
+        files = request.data
+
+        if len(files) == 0:
+            raise exceptions.ValidationError(detail=_("No files uploaded"))
+
+        with transaction.atomic():
+            for image in files:
+                #Append the original filename to url
+                imageurl = image["uploadURL"] + '#' + image["name"]
+                models.ImageUpload.objects.create(task=task, image=imageurl)
+
+        task.create_task_directories()
+
+        return Response({'success': True}, status=status.HTTP_200_OK)
+
+
+    @detail_route(methods=['post'])
     def duplicate(self, request, pk=None, project_pk=None):
         """
         Duplicate a task
@@ -240,7 +267,7 @@ class TaskViewSet(viewsets.ViewSet):
         # for now we just create a placeholder task.
         if request.data.get('partial'):
             task = models.Task.objects.create(project=project,
-                                              pending_action=pending_actions.RESIZE if 'resize_to' in request.data else None)
+                                              pending_action=pending_actions.PULL)
             serializer = TaskSerializer(task, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
@@ -252,7 +279,7 @@ class TaskViewSet(viewsets.ViewSet):
 
             with transaction.atomic():
                 task = models.Task.objects.create(project=project,
-                                                  pending_action=pending_actions.RESIZE if 'resize_to' in request.data else None)
+                                                  pending_action=pending_actions.PULL)
 
                 for image in files:
                     models.ImageUpload.objects.create(task=task, image=image)

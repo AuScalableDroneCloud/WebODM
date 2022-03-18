@@ -28,6 +28,14 @@ class ImportFolderTaskView(TaskView):
         
         # Fetch the platform by name    
         platform = get_platform_by_name(platform_name)
+
+        connection_details = None
+        if hasattr(platform, 'get_credentials'):
+            #Use webdav connection - get the connection info from user data
+            ds = get_current_plugin().get_user_data_store(request.user)
+            connection_details = platform.get_credentials(ds, request.user.id)
+            #Connect for the folder verify step
+            platform.connect(ds, request.user.id)
         
         # Make sure that the platform actually exists
         if platform == None:
@@ -48,11 +56,11 @@ class ImportFolderTaskView(TaskView):
         
         # Associate the folder url with the project and task
         combined_id = "{}_{}".format(project_pk, pk)
-        get_current_plugin().get_global_data_store().set_string(combined_id, folder_url)
+        get_current_plugin().get_global_data_store().set_string(combined_id, platform.basepath + folder_url)
 
         # Start importing the files in the background
         serialized = [file.serialize() for file in files]
-        run_function_async(import_files, task.id, serialized)
+        run_function_async(import_files, task.id, serialized, request.user.id, connection_details)
 
         return Response({}, status=status.HTTP_200_OK)
 
@@ -99,18 +107,38 @@ class PlatformsTaskView(TaskView):
         return Response({'platforms': [platform.serialize(user = request.user) for platform in platforms]}, status=status.HTTP_200_OK)
 
 
-def import_files(task_id, files):
+def import_files(task_id, files, user_id, connection_details=None):
     import requests
     from app import models
     from app.plugins import logger
 
+    connection = None
+    if connection_details and connection_details['type'] == 'webdav':
+        #Use webdav connection
+        from coreplugins.cloudimport.extensions.cloud_webdav import CloudWebDAV
+        connection = CloudWebDAV('', '')
+        connection.connect_dict(connection_details, user_id)
+
     def download_file(task, file):
         path = task.task_path(file['name'])
-        download_stream = requests.get(file['url'], stream=True, timeout=60)
+        if connection:
+            max_attempts = 10
+            for i in range(max_attempts):
+                try:
+                    connection.download(file['url'], path)
+                    break
+                except (Exception) as e:
+                    logger.error("Exception ocurred downloading file: " + file['url'] + " : " + str(e))
+                    logger.info("Attempting to re-connect...")
+                    import time
+                    time.sleep(2)
+                    connection.connect_dict(connection_details, user_id)
+        else:
+            download_stream = requests.get(file['url'], stream=True, timeout=60)
 
-        with open(path, 'wb') as fd:
-            for chunk in download_stream.iter_content(4096):
-                fd.write(chunk)
+            with open(path, 'wb') as fd:
+                for chunk in download_stream.iter_content(4096):
+                    fd.write(chunk)
         
         models.ImageUpload.objects.create(task=task, image=path)
 

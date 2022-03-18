@@ -18,6 +18,7 @@ django-webpack-loader==0.6.0
 djangorestframework==3.9.1
 djangorestframework-jwt==1.9.0
 drf-nested-routers==0.11.1
+social-auth-app-django~=3.1
 funcsigs==1.0.2
 futures==3.1.1
 geojson==2.3.0
@@ -38,6 +39,8 @@ psycopg2-binary==2.8.6
 PyJWT==1.5.3
 pyodm==1.5.9
 pyparsing==2.4.7
+python-jose~=3.3.0
+python-dotenv~=0.19.1
 pytz==2020.1
 rcssmin==1.0.6
 redis==3.2.0
@@ -61,4 +64,5 @@ https://github.com/OpenDroneMap/WebODM/releases/download/v1.9.7/GDAL-3.3.3-cp39-
 Shapely==1.7.0 ; sys_platform == "win32"
 eventlet==0.32.0 ; sys_platform == "win32"
 pyopenssl==19.1.0 ; sys_platform == "win32"
+webdavclient3~=3.14.6
 numpy==1.21.1

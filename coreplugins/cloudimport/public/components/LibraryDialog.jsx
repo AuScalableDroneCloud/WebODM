@@ -21,23 +21,37 @@ export default class LibraryDialog extends Component {
     this.state = {
 				availableFolders: [],
 				selectedFolder: null,
+				selectedPlatform: null,
 				loadingFolders: true,
 				error: "",
     };
   }
-	
+
 	componentDidUpdate(){
-    if (this.props.platform !== null && this.props.platform.type == "library" && this.state.loadingFolders){
-	    $.get(`${this.props.apiURL}/cloudlibrary/${this.props.platform.name}/listfolders`)
+    if (!this.props.platform) {
+      //Re-trigger folder loading on next selection
+      //without this we can only load folders for one cloud library
+      if (!this.state.loadingFolders) this.setState({loadingFolders: true, selectedFolder: null});
+    }
+
+    if (this.props.platform !== null && this.props.platform.type == "library" && this.state.loadingFolders) {
+	    $.get(`${this.props.apiURL}/cloudlibrary/${this.props.platform.name}/listfolders` + (this.state.selectedFolder ? this.state.selectedFolder.url : ""))
 	    .done(result => {
+        let sel = null
 	      result.folders.forEach(album => {
-	        album.label = `${album.name} (${album.images_count} images)`;
+	        album.label = album.images_count >= 0 ? `${album.name} (${album.images_count} images)` : `${album.name}`;
 	        album.value = album.url;
+          //If the currently selected platform is found, re-select now the image count is loaded
+          if (this.state.selectedFolder && this.state.selectedFolder.name == album.name && this.state.selectedFolder.images_count == -1)
+            sel = album;
 	      })
-	      this.setState({availableFolders: result.folders});
+        if (sel != null)
+  	      this.setState({selectedPlatform: this.props.platform.name, availableFolders: result.folders, selectedFolder: sel});
+        else
+  	      this.setState({selectedPlatform: this.props.platform.name, availableFolders: result.folders});
 	    })
 	    .fail((error) => {
-	        this.setState({loadingFolders: false, error: "Cannot load folders. Check your internet connection."});
+	        this.setState({availableFolders: [], loadingFolders: false, error: "Cannot load folders. Check your internet connection."});
 	    })
 			.always(() => {
 				this.setState({loadingFolders: false});
@@ -45,7 +59,11 @@ export default class LibraryDialog extends Component {
     }
   }
 	
-	handleSelectFolder = (e) => this.setState({selectedFolder: e});
+	handleSelectFolder = (e) => {
+    //if (this.state.selectedFolder != e)
+      this.setState({selectedFolder: e, loadingFolders: true, selectedPlatform: null});
+  }
+
 	handleSubmit = e => this.props.onSubmit(this.state.selectedFolder);
 	
 	render() {
@@ -73,7 +91,7 @@ export default class LibraryDialog extends Component {
 						isSearchable={true}
 						onChange={this.handleSelectFolder}
 						options={this.state.availableFolders}
-						placeholder={this.state.loadingFolders ? "Fetching Piwigo albums..." : "Please select a Piwigo album"}
+						placeholder={this.state.loadingFolders ? "Fetching folders..." : "Please select a folder"}
 						name="options"
 					/>
 				</Modal.Body>
@@ -81,7 +99,7 @@ export default class LibraryDialog extends Component {
 					<Button onClick={onHide}>Close</Button>
 					<Button
 						bsStyle="primary"
-						disabled={this.state.selectedFolder === null}
+						disabled={this.state.selectedFolder === null || this.state.selectedFolder.images_count < 2}
 						onClick={this.handleSubmit}
 					>
 						<i className={"fa fa-upload"} />

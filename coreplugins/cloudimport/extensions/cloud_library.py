@@ -15,12 +15,12 @@ class CloudLibrary(PlatformExtension):
     def __init__(self, name, folder_url_example):
         super().__init__(name, folder_url_example)
     
-    def get_form_fields(self):
+    def get_form_fields(self, user_id):
         return [self.get_server_url_field()]
     
     def get_api_views(self):
-        return [("cloudlibrary/(?P<platform_name>[^/.]+)/listfolders", GetAllFoldersTaskView.as_view())]
-        
+        return [("cloudlibrary/(?P<platform_name>[^/.]+)/listfolders(?P<root>(?:/[^/]+)*)", GetAllFoldersTaskView.as_view())]
+
     def serialize(self, **kwargs):
         base_payload = {'name': self.name, 'folder_url_example': self.folder_url_example}
         if kwargs['user'] != None:
@@ -34,7 +34,7 @@ class CloudLibrary(PlatformExtension):
                 base_payload[server_url_field.key] = stored_value
                 return base_payload
                 
-        base_payload['type'] = 'platform'        
+        base_payload['type'] = 'platform'
         return base_payload   
     
     def get_server_url_field(self):
@@ -43,7 +43,7 @@ class CloudLibrary(PlatformExtension):
     def verify_server_url(self, server_url):
         try:
             # Define the API url we will call to get all the folders in the server
-            folder_list_api_url = self.build_folder_list_api_url(server_url)
+            folder_list_api_url = self.build_folder_list_api_url(server_url, "/")
             # Call the API
             payload = self.call_api(folder_list_api_url)
             # Parse the payload into File instances
@@ -54,9 +54,9 @@ class CloudLibrary(PlatformExtension):
             logger.error(str(e))
             return "Error. Invalid server URL."
 
-    def list_folders_in_server(self, server_url):
+    def list_folders_in_server(self, server_url, root):
         # Define the API url we will call to get all the folders in the server
-        folder_list_api_url = self.build_folder_list_api_url(server_url)
+        folder_list_api_url = self.build_folder_list_api_url(server_url, root)
         # Call the API
         payload = self.call_api(folder_list_api_url)
         # Parse the payload into File instances
@@ -71,7 +71,7 @@ class CloudLibrary(PlatformExtension):
         return files
   
     @abstractmethod
-    def build_folder_list_api_url(self, server_url):
+    def build_folder_list_api_url(self, server_url, root):
         """Build the url of the API that lists all the folders in the server"""
   
     @abstractmethod
@@ -86,7 +86,7 @@ class ServerURLField(StringField):
     def get_django_field(self, user_data_store):
         return forms.URLField(
             label="Server URL",
-            help_text="Please insert the URL of the Piwigo server",
+            help_text="Please insert the URL of the server",
             required=False,
             max_length=1024,
             widget=forms.URLInput(attrs={"placeholder": "http://piwigo-server.com"}),
@@ -99,20 +99,26 @@ class ServerURLField(StringField):
             raise forms.ValidationError(result)
 
 class GetAllFoldersTaskView(TaskView):
-    def get(self, request, platform_name):
+    def get(self, request, platform_name, root):
+        if not len(root):
+            root = '/'
         platform = get_platform_by_name(platform_name)
         
         if platform == None:
             return Response({'error': 'Failed to find a platform with the name \'{}\''.format(platform_name)}, status=status.HTTP_400_BAD_REQUEST)
         
         ds = get_current_plugin().get_user_data_store(request.user)
-        
+
         server_url_field = platform.get_server_url_field()
         server_url = server_url_field.get_stored_value(ds)
         
-        if server_url == server_url_field.default_value:
+        if server_url == "":
             return Response({'error': 'You can\'t ask for the folders when there is no server configured'}, status=status.HTTP_412_PRECONDITION_FAILED)
         
-        folders = platform.list_folders_in_server(server_url)
+        #Open connection (if any, eg: WebDAV)
+        logger.info("Connecting..." + platform_name)
+        platform.connect(ds, request.user.id)
+        logger.info("Getting folder list")
+        folders = platform.list_folders_in_server(server_url, root)
         
         return Response({'folders': [folder.serialize() for folder in folders]}, status=status.HTTP_200_OK)     

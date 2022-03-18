@@ -36,7 +36,7 @@ except ImportError:
     secret = get_random_string(50, chars)
     with open(os.path.join(current_dir, 'secret_key.py'), 'w') as f:
         f.write("SECRET_KEY='{}'".format(secret))
-    SECRET_KEY=secret
+    SECRET_KEY = secret
 
     print("Generated secret key")
 
@@ -91,9 +91,27 @@ PLUGINS_BLACKLIST = [
 # Serve media static files URLs even in production
 FORCE_MEDIA_STATICFILES = False
 
+# AUTH0 Settings
+SOCIAL_AUTH_TRAILING_SLASH = False  # Remove trailing slash from routes
+SOCIAL_AUTH_AUTH0_DOMAIN = os.environ.get("WO_AUTH0_DOMAIN", "au-scalable-drone-cloud.au.auth0.com")
+SOCIAL_AUTH_AUTH0_KEY = os.environ.get("WO_AUTH0_KEY", "be8iHLsWn2t6ZsyZh0UofW1oaWScfsfC")
+SOCIAL_AUTH_AUTH0_SECRET = os.environ.get("WO_AUTH0_SECRET", "")
+SOCIAL_AUTH_AUTH0_SCOPE = [
+    'openid',
+    'profile',
+    'email'
+]
+
+# Shared encryption key - for encrypting stored strings shared between webapp and worker
+# If not defined, will use the app secret key, but this is not reliable
+# (eg: webapp and worker will have different secret keys unless they use the same filesystem volume)
+ENCRYPTION_KEY = os.environ.get("WO_ENCRYPTION_KEY", SECRET_KEY)
+
+
 # Application definition
 
 INSTALLED_APPS = [
+    'social_django',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -166,6 +184,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Hook guardian
 AUTHENTICATION_BACKENDS = (
+    'app.auth0backend.Auth0',
     'django.contrib.auth.backends.ModelBackend', # this is default
     'guardian.backends.ObjectPermissionBackend',
 )
@@ -260,8 +279,9 @@ LOGGING = {
 
 
 # Auth
-LOGIN_REDIRECT_URL = '/dashboard/'
-LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/dashboard'
+#LOGIN_URL = '/login/'
+LOGIN_URL = '/login/auth0'
 
 # CORS (very relaxed settings, users might want to change this in production)
 CORS_ORIGIN_ALLOW_ALL = True
