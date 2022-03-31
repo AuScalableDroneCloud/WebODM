@@ -21,15 +21,20 @@ RUN apt-get -qq update && apt-get -qq install -y --no-install-recommends wget cu
     pip install -U pip && pip install -r requirements.txt "boto3==1.14.14" && \
     # Setup cron
     ln -s /webodm/nginx/crontab /var/spool/cron/crontabs/root && chmod 0644 /webodm/nginx/crontab && service cron start && chmod +x /webodm/nginx/letsencrypt-autogen.sh && \
-    /webodm/nodeodm/setup.sh && /webodm/nodeodm/cleanup.sh && cd /webodm && \
-    npm install --quiet -g webpack@4.16.5 && npm install --quiet -g webpack-cli@4.2.0 && npm install --quiet && webpack --mode production && \
-    echo "UTC" > /etc/timezone && \
-    python manage.py collectstatic --noinput && \
-    python manage.py rebuildplugins && \
-    python manage.py translate build --safe && \
     # Cleanup
     apt-get remove -y g++ python3-dev libpq-dev && apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    /webodm/nodeodm/setup.sh && /webodm/nodeodm/cleanup.sh && cd /webodm && \
+    npm install --quiet -g webpack@4.16.5 && npm install --quiet -g webpack-cli@4.2.0 && npm install --quiet && webpack --mode production && \
+    echo "UTC" > /etc/timezone && \
+    useradd -m -d "/home/webodm" -s /bin/bash webodm && \
+    chown -R webodm:webodm /webodm
+
+USER webodm
+
+RUN python manage.py collectstatic --noinput && \
+    python manage.py rebuildplugins && \
+    python manage.py translate build --safe && \
     rm /webodm/webodm/secret_key.py
 
 VOLUME /webodm/app/media
