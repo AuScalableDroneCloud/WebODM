@@ -147,7 +147,7 @@ else
 
     congrats
 
-    nginx -c $(pwd)/nginx/$conf
+    nginx -c $(pwd)/nginx/$conf -p $(pwd)/nginx/ #Set a prefix with write permissions
     gunicorn webodm.wsgi --bind unix:/tmp/gunicorn.sock --timeout 300000 --max-requests 250 --workers $((2*$(grep -c '^processor' /proc/cpuinfo)+1)) --preload 
 fi
 
