@@ -33,7 +33,7 @@ if [ ! -z $WO_CONTACT_EMAIL ]; then
   CONTACT_EMAIL_ARGS="-m ${WO_CONTACT_EMAIL}"
 fi
 
-certbot certonly --http-01-port 8080 --work-dir ./letsencrypt --config-dir ./letsencrypt --logs-dir ./letsencrypt --standalone -d $DOMAIN $CONTACT_EMAIL_ARGS --agree-tos --keep
+certbot certonly --http-01-port 8080 --work-dir ./letsencrypt --config-dir ./letsencrypt --logs-dir ./letsencrypt --standalone -d $DOMAIN $CERTBOT_EXTRA_ARGS $CONTACT_EMAIL_ARGS --agree-tos --keep
 
 # Create ssl dir if necessary
 if [ ! -e ssl/ ]; then

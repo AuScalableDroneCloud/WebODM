@@ -31,16 +31,16 @@ http {
   server {
       server_name $WO_HOST;
       listen 8080;
-      return 301 https://$WO_HOST:$WO_PORT$request_uri;
+      return 301 https://$WO_HOST$request_uri;
   }
 
   server {
-    listen 8000 deferred;
+    listen 8000 default_server ssl;
+
     client_max_body_size 0;
 
     server_name $WO_HOST;
 
-    ssl on;
     ssl_certificate /webodm/nginx/ssl/cert.pem;
     ssl_certificate_key /webodm/nginx/ssl/key.pem;
 
@@ -79,10 +79,6 @@ http {
     #tusd proxy
     location /files/ {
       proxy_pass http://tusd.default.svc.cluster.local/files/;
-      #use google as dns resolver
-      resolver 8.8.8.8;
-
-      proxy_ssl_session_reuse on; #TEST
 
       #access_log  /var/log/nginx/tusd.access.log;
       #error_log  /var/log/nginx/tusd.error.log;
@@ -93,22 +89,48 @@ http {
       proxy_buffering          off;
       proxy_http_version       1.1;
 
-      # Add X-Forwarded-* headers
-      proxy_set_header X-Forwarded-Host $host;
-      proxy_set_header X-Forwarded-Proto https;
-      #proxy_set_header X-Forwarded-Proto $scheme;
-      #proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-      #proxy_set_header Host $http_host;
-      #proxy_set_header X-Real-IP $remote_addr;
-
-      proxy_set_header         Upgrade $http_upgrade;
-      proxy_set_header         Connection "upgrade";
-      client_max_body_size     0;
+      include proxy.conf;
     }
 
-    #TBD...
-    #location /uppy/ {
-    #}
+    #cesium proxy
+    location /cesium/ {
+      proxy_pass http://cesium.default.svc.cluster.local:8080/cesium/;
+      include proxy.conf;
+    }
 
+    #ept proxy
+    location /ept/ {
+      proxy_pass http://cesium.default.svc.cluster.local:3000/;
+      include proxy.conf;
+    }
+
+    #cesium-api proxy
+    location /cesium-api/ {
+      proxy_pass http://cesium-api.default.svc.cluster.local:8081/;
+      include proxy.conf;
+    }
+
+    #terria proxy
+    location /terria/ {
+      proxy_pass http://terria.default.svc.cluster.local:3001/;
+      include proxy.conf;
+    }
+
+    #}
   }
+
+  #dronedb proxy (subdomain)
+  #server {
+  #  server_name registry.$WO_HOST;
+  #  listen 8000 ssl; # deferred;
+  #  ssl_certificate /webodm/nginx/ssl/cert.pem;
+  #  ssl_certificate_key /webodm/nginx/ssl/key.pem;
+  #  location / {
+  #    proxy_pass http://registry.dronedb.svc.cluster.local:80;
+  #    include proxy.conf;
+  #  }
+  #}
+
+
 }
+
