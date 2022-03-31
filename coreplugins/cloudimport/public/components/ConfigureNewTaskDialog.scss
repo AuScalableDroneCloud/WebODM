@@ -6,6 +6,8 @@
 	margin-right: 1em;
 }
 
-.modal-80w {
-	width: 80%;
+/* Fix edit dialog when opened from plugin modal dialog */
+.modal-newtask {
+  min-height: 100%;
 }
+

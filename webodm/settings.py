@@ -123,6 +123,7 @@ INSTALLED_APPS = [
     'guardian',
     'rest_framework',
     'rest_framework_nested',
+    'drf_yasg',
     'webpack_loader',
     'corsheaders',
     'colorfield',
@@ -331,7 +332,7 @@ REST_FRAMEWORK = {
     'rest_framework.permissions.DjangoObjectPermissions',
   ],
   'DEFAULT_FILTER_BACKENDS': [
-    'rest_framework.filters.DjangoObjectPermissionsFilter',
+    'rest_framework_guardian.filters.ObjectPermissionsFilter',
     'django_filters.rest_framework.DjangoFilterBackend',
     'rest_framework.filters.OrderingFilter',
   ],
