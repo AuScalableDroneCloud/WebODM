@@ -102,6 +102,19 @@ SOCIAL_AUTH_AUTH0_SCOPE = [
     'email'
 ]
 
+SOCIAL_AUTH_PIPELINE = (
+  'social_core.pipeline.social_auth.social_details',
+  'social_core.pipeline.social_auth.social_uid',
+  'social_core.pipeline.social_auth.social_user',
+  'social_core.pipeline.user.get_username',
+  'social_core.pipeline.social_auth.associate_by_email',
+  'social_core.pipeline.user.create_user',
+  'auth0.pipeline.cleanup_social_account', #Custom cleanup
+  'social_core.pipeline.social_auth.associate_user',
+  'social_core.pipeline.social_auth.load_extra_data',
+  'social_core.pipeline.user.user_details',
+)
+
 # Shared encryption key - for encrypting stored strings shared between webapp and worker
 # If not defined, will use the app secret key, but this is not reliable
 # (eg: webapp and worker will have different secret keys unless they use the same filesystem volume)
@@ -143,6 +156,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.locale.LocaleMiddleware',
+    'django.contrib.auth.middleware.RemoteUserMiddleware',
+    'auth0.middleware.SocialAuthExceptionMiddleware',
 ]
 
 ROOT_URLCONF = 'webodm.urls'
@@ -185,9 +200,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Hook guardian
 AUTHENTICATION_BACKENDS = (
-    'app.auth0backend.Auth0',
+    'social_core.backends.auth0.Auth0OAuth2',
     'django.contrib.auth.backends.ModelBackend', # this is default
     'guardian.backends.ObjectPermissionBackend',
+    'django.contrib.auth.backends.RemoteUserBackend',
 )
 
 # Internationalization
@@ -314,6 +330,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'app.contexts.settings.load',
+                'social_django.context_processors.backends',
             ],
         },
     },
@@ -348,6 +365,14 @@ REST_FRAMEWORK = {
 
 JWT_AUTH = {
     'JWT_EXPIRATION_DELTA': datetime.timedelta(hours=6),
+    'JWT_PAYLOAD_GET_USERNAME_HANDLER':
+        'auth0.utils.jwt_get_username_from_payload_handler',
+    'JWT_DECODE_HANDLER':
+        'auth0.utils.jwt_decode_token',
+    'JWT_ALGORITHM': 'RS256',
+    'JWT_AUDIENCE': os.environ.get('WO_HOST') + 'api',
+    'JWT_ISSUER': SOCIAL_AUTH_AUTH0_DOMAIN,
+    'JWT_AUTH_HEADER_PREFIX': 'JWT',
 }
 
 # Compressor

@@ -16,7 +16,7 @@ Including another URLconf
 import os
 
 from django.conf.urls import include, url
-from django.urls import re_path
+from django.urls import include, path, re_path
 from django.contrib import admin
 from . import settings
 from django.views.static import serve
@@ -42,6 +42,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     url(r'^', include('app.urls')),
     url(r'^', include('django.contrib.auth.urls')),
+    path('', include('auth0.urls')),
     url(r'^admin/', admin.site.urls),
     re_path(r'^swagger(?P<format>\.json|\.yaml)$', schema_view.without_ui(cache_timeout=0), name='schema-json'),
     re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
