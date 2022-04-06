@@ -370,7 +370,7 @@ JWT_AUTH = {
     'JWT_DECODE_HANDLER':
         'auth0.utils.jwt_decode_token',
     'JWT_ALGORITHM': 'RS256',
-    'JWT_AUDIENCE': os.environ.get('WO_HOST') + 'api',
+    'JWT_AUDIENCE': os.environ.get('WO_HOST', 'http://localhost:8000') + '/api',
     'JWT_ISSUER': SOCIAL_AUTH_AUTH0_DOMAIN,
     'JWT_AUTH_HEADER_PREFIX': 'JWT',
 }
