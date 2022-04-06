@@ -372,7 +372,8 @@ JWT_AUTH = {
     'JWT_ALGORITHM': 'RS256',
     'JWT_AUDIENCE': os.environ.get('WO_HOST', 'http://localhost:8000') + '/api',
     'JWT_ISSUER': SOCIAL_AUTH_AUTH0_DOMAIN,
-    'JWT_AUTH_HEADER_PREFIX': 'JWT',
+    #'JWT_AUTH_HEADER_PREFIX': 'JWT',
+    'JWT_AUTH_HEADER_PREFIX': 'Bearer',
 }
 
 # Compressor
