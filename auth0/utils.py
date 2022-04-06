@@ -34,7 +34,7 @@ def jwt_decode_token(token):
     if public_key is None:
         raise Exception('Public key not found.')
 
-        ,
+
     issuer = 'https://{}/'.format(settings.SOCIAL_AUTH_AUTH0_DOMAIN)
     return jwt.decode(token, public_key, audience=settings.JWT_AUTH['JWT_AUDIENCE'], issuer=issuer, algorithms=['RS256'])
 
