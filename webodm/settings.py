@@ -363,6 +363,12 @@ REST_FRAMEWORK = {
   'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
 }
 
+audience = os.environ.get('WO_HOST', 'localhost:8000')
+if os.environ.get('WO_SSL', 'NO') == 'YES':
+    audience = 'https://' + audience + '/api'
+else:
+    audience = 'http://' + audience + '/api'
+
 JWT_AUTH = {
     'JWT_EXPIRATION_DELTA': datetime.timedelta(hours=6),
     'JWT_PAYLOAD_GET_USERNAME_HANDLER':
@@ -370,7 +376,7 @@ JWT_AUTH = {
     'JWT_DECODE_HANDLER':
         'auth0.utils.jwt_decode_token',
     'JWT_ALGORITHM': 'RS256',
-    'JWT_AUDIENCE': os.environ.get('WO_HOST', 'http://localhost:8000') + '/api',
+    'JWT_AUDIENCE': audience,
     'JWT_ISSUER': SOCIAL_AUTH_AUTH0_DOMAIN,
     #'JWT_AUTH_HEADER_PREFIX': 'JWT',
     'JWT_AUTH_HEADER_PREFIX': 'Bearer',
