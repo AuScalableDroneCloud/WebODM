@@ -1,6 +1,6 @@
 # Automatically renew the SSL certificate (if needed)
 #0 0 1 * * root source /webodm/.cronenv; bash -c "/webodm/nginx/letsencrypt-autogen.sh; chown -R webodm:webodm /webodm/nginx/"
 #Run daily as test
-50 12 * * * webodm source /webodm/.cronenv; bash -c "unset WO_SSL_KEY; /webodm/nginx/letsencrypt-autogen.sh &> /tmp/cronjob.log;"
+30 13 * * * webodm source /webodm/.cronenv; bash -c "unset WO_SSL_KEY; /webodm/nginx/letsencrypt-autogen.sh &> /tmp/cronjob.log;"
 
 # An empty line is required at the end of this file for a valid cron file.
