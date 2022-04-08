@@ -22,7 +22,7 @@ RUN apt-get -qq update && apt-get -qq install -y --no-install-recommends wget cu
     # Install pip reqs
     pip install -U pip && pip install -r requirements.txt "boto3==1.14.14" && \
     # Setup cron
-    ln -s /webodm/nginx/crontab /var/spool/cron/crontabs/root && chmod 0644 /webodm/nginx/crontab && service cron start && chmod +x /webodm/nginx/letsencrypt-autogen.sh && \
+    service cron start && \
     # Cleanup
     apt-get remove -y g++ python3-dev libpq-dev && apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
@@ -36,7 +36,8 @@ RUN apt-get -qq update && apt-get -qq install -y --no-install-recommends wget cu
 
 USER webodm
 
-RUN python manage.py collectstatic --noinput && \
+RUN crontab /webodm/nginx/crontab && chmod +x /webodm/nginx/letsencrypt-autogen.sh && \
+    python manage.py collectstatic --noinput && \
     python manage.py rebuildplugins && \
     python manage.py translate build --safe && \
     rm /webodm/webodm/secret_key.py

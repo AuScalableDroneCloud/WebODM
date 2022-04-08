@@ -1,7 +1,6 @@
 worker_processes 1;
 
 # Change this if running outside docker!
-user webodom webodm;
 pid /tmp/nginx.pid;
 error_log /tmp/nginx.error.log;
 
