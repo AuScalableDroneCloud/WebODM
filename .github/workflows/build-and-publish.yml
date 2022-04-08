@@ -18,8 +18,8 @@ jobs:
       with:
         submodules: 'recursive'
 
-      - name: Add SHORT_SHA env property with commit short sha
-        run: echo "SHORT_SHA=`git rev-parse --short HEAD`" >> $GITHUB_ENV
+    - name: Add SHORT_SHA env property with commit short sha
+      run: echo "SHORT_SHA=`git rev-parse --short HEAD`" >> $GITHUB_ENV
 
     - name: Docker meta
       id: meta
