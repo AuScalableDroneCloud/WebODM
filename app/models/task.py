@@ -516,7 +516,7 @@ class Task(models.Model):
                         shutil.copytree(self.task_path(), task.task_path(), copy_function=os.link)
                     except Exception as e:
                         logger.warning("Cannot duplicate task using hard links, will use normal copy instead: {}".format(str(e)))
-                        shutil.copytree(self.task_path(), task.task_path())
+                        shutil.copytree(self.task_path(), task.task_path(), dirs_exist_ok=True)
                 else:
                     logger.warning("Task {} doesn't have folder, will skip copying".format(self))
             return task
