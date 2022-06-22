@@ -129,7 +129,7 @@ else
     for templ in nginx/*.template
     do
         echo "- ${templ%.*}"
-        envsubst '\$WO_PORT \$WO_HOST' < $templ > ${templ%.*}
+        envsubst '\$WO_PORT \$WO_HOST \$WO_SSL_CERT \$WO_SSL_KEY' < $templ > ${templ%.*}
     done
 
     # Check if we need to auto-generate SSL certs via letsencrypt
