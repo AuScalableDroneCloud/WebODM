@@ -524,7 +524,10 @@ class Task(models.Model):
                         shutil.copytree(self.task_path(), task.task_path(), copy_function=os.link)
                     except Exception as e:
                         logger.warning("Cannot duplicate task using hard links, will use normal copy instead: {}".format(str(e)))
-                        shutil.copytree(self.task_path(), task.task_path(), dirs_exist_ok=True)
+                        # shutil.copytree errors if writing to a filesystem that doesn't support chmod, even if the copy succeeds
+                        #shutil.copytree(self.task_path(), task.task_path(), dirs_exist_ok=True)
+                        from distutils.dir_util import copy_tree
+                        copy_tree(self.task_path(), task.task_path(), preserve_mode=0, preserve_times=0, preserve_symlinks=0, update=0)
                 else:
                     logger.warning("Task {} doesn't have folder, will skip copying".format(self))
             return task
