@@ -21,8 +21,9 @@ RUN apt-get -qq update && apt-get -qq install -y --no-install-recommends wget cu
     apt-get -qq install -y psmisc curl vim nmap netcat iputils-ping rsync && \
     # Install pip reqs
     pip install -U pip && pip install -r requirements.txt "boto3==1.14.14" && \
-    # Setup cron
-    service cron start && \
+    # Setup cron so user can start
+    chmod u+s /usr/sbin/cron && \
+    touch /var/log/cron.log && \
     # Cleanup
     apt-get remove -y g++ python3-dev libpq-dev && apt-get autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
@@ -36,7 +37,8 @@ RUN apt-get -qq update && apt-get -qq install -y --no-install-recommends wget cu
 
 USER webodm
 
-RUN crontab /webodm/nginx/crontab && chmod +x /webodm/nginx/letsencrypt-autogen.sh && \
+RUN crontab /webodm/nginx/crontab && \
+    chmod +x /webodm/nginx/letsencrypt-autogen.sh && \
     python manage.py collectstatic --noinput && \
     python manage.py rebuildplugins && \
     python manage.py translate build --safe && \

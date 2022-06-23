@@ -82,6 +82,9 @@ export WO_PORT="${WO_PORT:=8000}"
 # Dump environment to .cronenv
 printenv > .cronenv
 
+#Start cron
+cron &
+
 proto="http"
 if [ "$WO_SSL" = "YES" ]; then
     proto="https"

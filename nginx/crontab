@@ -1,6 +1,4 @@
-# Automatically renew the SSL certificate (if needed)
-0 0 1 * * bash -c "export $(cat /webodm/.cronenv | xargs); unset WO_SSL_KEY; /webodm/nginx/letsencrypt-autogen.sh &> /tmp/cronjob.log;"
-#Run test on 9th
-0 0 9 * * bash -c "export $(cat /webodm/.cronenv | xargs); unset WO_SSL_KEY; /webodm/nginx/letsencrypt-autogen.sh &> /tmp/cronjob.log;"
-
+# Automatically renew the SSL certificate on 1st of month (if needed)
+0 0 1 * * bash -c "export $(cat /webodm/.cronenv | xargs); unset WO_SSL_KEY; /webodm/nginx/letsencrypt-autogen.sh; cp /webodm/nginx/ssl/*.pem /webodm/app/media/ssl/ &> /tmp/cronjob.log;"
 # An empty line is required at the end of this file for a valid cron file.
+
