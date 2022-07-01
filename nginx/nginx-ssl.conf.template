@@ -48,6 +48,9 @@ http {
     proxy_connect_timeout 60s;
     proxy_read_timeout 300000s;
 
+    # Disable port in redirects
+    port_in_redirect off;
+
     # path for static files
     location /static {
       root /webodm/build;
