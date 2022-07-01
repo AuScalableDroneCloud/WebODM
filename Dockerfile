@@ -18,7 +18,7 @@ RUN apt-get -qq update && apt-get -qq install -y --no-install-recommends wget cu
     apt-get -qq update && apt-get -qq install -y --no-install-recommends python3 python3-pip python3-setuptools python3-wheel git g++ python3-dev python2.7-dev libpq-dev binutils libproj-dev gdal-bin pdal libgdal-dev python3-gdal nginx certbot grass-core gettext-base cron postgresql-client-13 gettext tzdata && \
     update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1 && update-alternatives --install /usr/bin/python python /usr/bin/python3.9 2 && \
     #Debugging utils
-    apt-get -qq install -y psmisc curl vim nmap netcat iputils-ping rsync && \
+    apt-get -qq install -y psmisc curl vim nmap netcat iputils-ping rsync fail2ban && \
     # Install pip reqs
     pip install -U pip && pip install -r requirements.txt "boto3==1.14.14" && \
     # Setup cron so user can start
