@@ -1,5 +1,4 @@
 # Automatically renew the SSL certificate on 1st of month (if needed)
 # (Now just removing current certs and killing server process, renewal happens in asdc_init.sh)
-0 0 1 * * bash -c "rm /webodm/nginx/ssl/*.pem; killall nginx; killall gunicorn; &> /tmp/cronjob.log;"
 # An empty line is required at the end of this file for a valid cron file.
 

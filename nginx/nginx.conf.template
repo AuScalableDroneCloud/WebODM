@@ -1,7 +1,6 @@
 worker_processes 1;
 
 # Change this if running outside docker!
-user webodom webodm;
 pid /tmp/nginx.pid;
 error_log /tmp/nginx.error.log;
 
@@ -28,7 +27,7 @@ http {
   }
 
   server {
-    listen 8000 deferred;
+    listen 8000 default_server;
     client_max_body_size 0;
 
     server_name $WO_HOST;
@@ -37,6 +36,9 @@ http {
 
     proxy_connect_timeout 60s;
     proxy_read_timeout 300000s;
+
+    # Disable port in redirects
+    port_in_redirect off;
 
     # path for static files
     location /static {
@@ -55,14 +57,19 @@ http {
     location / {
       proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
-      # enable this if and only if you use HTTPS
-      # proxy_set_header X-Forwarded-Proto https;
       proxy_set_header Host $http_host;
 
       # we don't want nginx trying to do something clever with
       # redirects, we set the Host: header above already.
       proxy_redirect off;
       proxy_pass http://app_server;
+    }
+
+    #terria proxy
+    location /terria/ {
+      proxy_pass http://terria.default.svc.cluster.local:3001/;
+
+      include proxy.conf;
     }
   }
 }
