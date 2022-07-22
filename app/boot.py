@@ -101,7 +101,6 @@ def add_default_presets():
     try:
         Preset.objects.update_or_create(name='Multispectral', system=True,
                                         defaults={'options': [{'name': 'auto-boundary', 'value': True},
-                                                              {'name': 'texturing-skip-global-seam-leveling', 'value': True},
                                                               {'name': 'radiometric-calibration', 'value': 'camera'},
                                                               ]})
         Preset.objects.update_or_create(name='Volume Analysis', system=True,
