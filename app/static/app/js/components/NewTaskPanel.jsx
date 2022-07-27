@@ -103,7 +103,7 @@ class NewTaskPanel extends React.Component {
       .use(GoogleDrive, {companionUrl: 'https://companion.uppy.io'})
       .use(Dropbox, {companionUrl: 'https://companion.uppy.io'})
       .use(OneDrive, {companionUrl: 'https://companion.uppy.io'})
-      .use(Tus, {endpoint: 'https://asdc.cloud.edu.au/files/'})
+      .use(Tus, {endpoint: location.protocol + '//tusd.' + location.hostname + '/files/'})
       //.use(XHRUpload, {endpoint: `/api/projects/${this.state.data.id}/tasks/${this.state.taskInfo.id}/upload/`})
 
     this.save = this.save.bind(this);
