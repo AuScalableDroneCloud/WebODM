@@ -5,8 +5,8 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-#  release:
-#    types: [published]
+  release:
+    types: [published]
 
 jobs:
   build:
@@ -52,6 +52,7 @@ jobs:
       with:
         context: .
         push: true
+        no-cache: true
         tags: |
           ghcr.io/auscalabledronecloud/asdc-webodm:latest
           ${{ steps.meta.outputs.tags }}
