@@ -65,9 +65,19 @@ http {
       proxy_pass http://app_server;
     }
 
+    #TODO: remove these when everything moved to
+    #use subdomains
+
     #terria proxy
     location /terria/ {
       proxy_pass http://terria.default.svc.cluster.local:3001/;
+
+      include proxy.conf;
+    }
+
+    #ept proxy
+    location /ept/ {
+      proxy_pass http://cesium.default.svc.cluster.local:3000/;
 
       include proxy.conf;
     }
