@@ -40,6 +40,9 @@ RUN apt-get -qq update && apt-get -qq install -y --no-install-recommends wget cu
 
 USER webodm
 
+#Add the local python package bin dir to PATH
+ENV PATH="${PATH}:/home/webodm/.local/bin"
+
 RUN python manage.py collectstatic --noinput && \
     python manage.py rebuildplugins && \
     python manage.py translate build --safe && \
