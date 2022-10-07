@@ -21,11 +21,11 @@
   },
   "homepage": "https://github.com/OpenDroneMap/WebODM#readme",
   "dependencies": {
-    "@babel/core": "^7.0.0-beta.54",
-    "@babel/plugin-proposal-class-properties": "^7.0.0-beta.54",
-    "@babel/plugin-syntax-class-properties": "^7.0.0-beta.54",
-    "@babel/preset-env": "^7.0.0-beta.54",
-    "@babel/preset-react": "^7.0.0-beta.54",
+    "@babel/core": "^7.0.0",
+    "@babel/plugin-proposal-class-properties": "^7.0.0",
+    "@babel/plugin-syntax-class-properties": "^7.0.0",
+    "@babel/preset-env": "^7.0.0",
+    "@babel/preset-react": "^7.0.0",
     "@babel/runtime": "^7.4.5",
     "@uppy/core": "^3.0.2",
     "@uppy/dashboard": "^3.1.0",
@@ -43,14 +43,13 @@
     "async": "^2.1.2",
     "babel-core": "^7.0.0-bridge.0",
     "babel-jest": "^23.4.0",
-    "babel-loader": "^8.0.0-beta.4",
+    "babel-loader": "^8.0.0",
     "clipboard": "^1.7.1",
     "css-loader": "^0.25.0",
     "d3": "^3.5.5",
     "enzyme": "^3.3.0",
     "enzyme-adapter-react-16": "^1.15.1",
     "exifr": "^6.0.0",
-    "extract-text-webpack-plugin": "^4.0.0-beta.0",
     "fbemitter": "^2.1.1",
     "file-loader": "^0.9.0",
     "file-saver": "^2.0.2",
@@ -81,5 +80,8 @@
     "webpack": "^4.46.0",
     "webpack-bundle-tracker": "^1.6.0",
     "webpack-livereload-plugin": "^3.0.2"
+  },
+  "devDependencies": {
+    "mini-css-extract-plugin": "^1.6.2"
   }
 }
