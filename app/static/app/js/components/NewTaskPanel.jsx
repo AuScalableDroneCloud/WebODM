@@ -9,22 +9,22 @@ import PluginsAPI from '../classes/plugins/API';
 import { _, interpolate } from '../classes/gettext';
 
 // Uppy file uploader components
-const Uppy = require('@uppy/core')
+import Uppy from '@uppy/core'
 
 import '@uppy/core/dist/style.css'
 import '@uppy/dashboard/dist/style.css'
 
-const { Dashboard } = require('@uppy/react');
+import { Dashboard, useUppy } from '@uppy/react'
 
-const GoogleDrive = require('@uppy/google-drive')
-const Dropbox = require('@uppy/dropbox')
-const OneDrive = require('@uppy/onedrive')
-const Webcam = require('@uppy/webcam')
-const Tus = require('@uppy/tus')
-const Url = require('@uppy/url')
-const DropTarget = require('@uppy/drop-target')
-const GoldenRetriever = require('@uppy/golden-retriever')
-//const XHRUpload = require('@uppy/xhr-upload')
+import GoogleDrive from'@uppy/google-drive'
+import Dropbox from'@uppy/dropbox'
+import OneDrive from'@uppy/onedrive'
+import Webcam from'@uppy/webcam'
+import Tus from '@uppy/tus'
+import Url from'@uppy/url'
+import DropTarget from'@uppy/drop-target'
+import GoldenRetriever from'@uppy/golden-retriever'
+//import XHRUpload from'@uppy/xhr-upload'
 
 class NewTaskPanel extends React.Component {
   static defaultProps = {
@@ -217,7 +217,6 @@ class NewTaskPanel extends React.Component {
               <Dashboard
                 uppy={this.uppy}
                 doneButtonHandler={this.props.onReview}
-                inline="true"
                 width="100%"
                 //thumbnailWidth="100" //broken
                 note="Images files and GCP.txt only"
