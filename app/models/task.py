@@ -89,35 +89,51 @@ def pull_image(image, task_folder, done=None):
     retval = image.path()
     try:
         if not os.path.exists(task_folder):
-            logger.warning("Project folder {} for task doesn't exist, this doesn't look right, so we will not retrieve any files.".format(task_folder))
+            logger.warning(f"Project folder {task_folder} for task doesn't exist, this doesn't look right, so we will not retrieve any files.")
             return []
-        logger.info("Found task folder {}".format(task_folder))
+        logger.info(f"Found task folder {task_folder}")
 
         import io
         import json
         image_list = []
 
         #Stored as upload URL instead of local path with original filename after #
-        logger.info("Pulling image, name: {}".format(image.image.name))
-        uploadURL, filename = image.image.name.rsplit('#', 1)
+        fp = image.image.name
+        logger.info(f"Pulling image, name: {fp}")
+        if '#' in fp:
+            uploadURL, filename = fp.rsplit('#', 1)
 
-        logger.info("- orig filename {} source url {} ".format(filename, uploadURL))
-        #Download from upload server if doesn't exist
-        fp = os.path.join(task_folder, filename)
+            # Check if url is invalid and reconstruct
+            if uploadURL[0:4] != "http":
+                domain = os.environ.get('WO_HOST')
+                ufn = uploadURL.rsplit('/', 1)[1]
+                uploadURL = f"https://tusd.{domain}/files/{ufn}"
+                logger.info(f"- rebuilt source url: {uploadURL}")
+
+            logger.info(f"- orig filename {filename} source url {uploadURL} ")
+            #Download from upload server if doesn't exist
+            fp = os.path.join(task_folder, filename)
+        else:
+            #No url, just a pathname that should already exist
+            uploadURL = ""
+
         if not os.path.exists(fp):
-            logger.info("- downloading to {}".format(fp))
+            logger.info(f"- downloading to {fp}")
             try:
                 download_stream = requests.get(uploadURL, stream=True, timeout=60)
                 with open(fp, 'wb') as fd:
                     for chunk in download_stream.iter_content(4096):
                         fd.write(chunk)
-                #Return the downoad dest path
+                #Return the download dest path
                 retval = fp
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
-                logger.warning("Error downloading image {} from {}".format(filename, uploadURL))
+                logger.warning(f"Error downloading image {filename} from {uploadURL}")
+        else:
+            #Return the recomputed path in case the original was malformed
+            retval = fp
 
     except Exception  as e:
-        logger.warning("Failed to pull image for task. We're going to proceed anyway, but you might experience issues: {}".format(e))
+        logger.warning(f"Failed to pull image for task. We're going to proceed anyway, but you might experience issues: {e}")
 
     if done is not None:
         done(retval)
@@ -720,9 +736,21 @@ class Task(models.Model):
                     images = [image.path() for image in self.imageupload_set.all()]
 
                     #Check for urls remaining in image paths
-                    if any(image[0:4] == "http" in image for image in images):
+                    if any("https:" in image for image in images):
+                        logger.warning("URL FOUND IN IMAGES! - reprocessing from pull")
+                        for image in images:
+                            if "https:" in image:
+                                logger.warning(f" - Problem image entry: {image}")
+
                         self.pending_action = pending_actions.PULL
                         return self.process()
+
+                    #FAILSAFE: ensure all images files now exist, discard any missing
+                    i1 = len(images)
+                    images = [image for image in images if os.path.exists(image)]
+                    i2 = len(images)
+                    if i2 < i1:
+                        logger.warning(f"Some images not found! uploaded: {i1} > found: {i2}!")
 
                     # Track upload progress, but limit the number of DB updates
                     # to every 2 seconds (and always record the 100% progress)
