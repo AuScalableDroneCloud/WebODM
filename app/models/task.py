@@ -88,10 +88,11 @@ def pull_image(image, task_folder, done=None):
     #Default to local image stored by pathname
     retval = image.path()
     try:
-        if not os.path.exists(task_folder):
-            logger.warning(f"Project folder {task_folder} for task doesn't exist, this doesn't look right, so we will not retrieve any files.")
+        absolute_task_folder = os.path.join(settings.MEDIA_ROOT, task_folder)
+        if not os.path.exists(absolute_task_folder):
+            logger.warning(f"Project folder {absolute_task_folder} for task doesn't exist, this doesn't look right, so we will not retrieve any files.")
             return []
-        logger.info(f"Found task folder {task_folder}")
+        logger.info(f"Found task folder {absolute_task_folder}")
 
         import io
         import json
@@ -112,7 +113,7 @@ def pull_image(image, task_folder, done=None):
 
             logger.info(f"- orig filename {filename} source url {uploadURL} ")
             #Download from upload server if doesn't exist
-            fp = os.path.join(task_folder, filename)
+            fp = os.path.join(absolute_task_folder, filename)
         else:
             #No url, just a pathname that should already exist
             uploadURL = ""
@@ -124,13 +125,13 @@ def pull_image(image, task_folder, done=None):
                 with open(fp, 'wb') as fd:
                     for chunk in download_stream.iter_content(4096):
                         fd.write(chunk)
-                #Return the download dest path
-                retval = fp
+                #Return the RELATIVE download dest path
+                retval = os.path.join(task_folder, filename)
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
                 logger.warning(f"Error downloading image {filename} from {uploadURL}")
         else:
-            #Return the recomputed path in case the original was malformed
-            retval = fp
+            #Return the recomputed RELATIVE path in case the original was malformed
+            retval = os.path.join(task_folder, filename)
 
     except Exception  as e:
         logger.warning(f"Failed to pull image for task. We're going to proceed anyway, but you might experience issues: {e}")
@@ -352,7 +353,7 @@ class Task(models.Model):
         """
         Retrieve uploaded images from staging area to local disk
         """
-        task_folder = full_task_directory_path(self.id, self.project_id)
+        task_folder = task_directory_path(self.id, self.project_id)
 
         #images_path = self.find_all_files_matching(r'.*\.(jpe?g|tiff?)$')
         images_set = self.imageupload_set.all()
