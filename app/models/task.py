@@ -1100,6 +1100,10 @@ class Task(models.Model):
         """
         all_assets = list(self.ASSETS_MAP.keys())
         self.available_assets = [asset for asset in all_assets if self.is_asset_available_slow(asset)]
+        #Get actual files present and add any that are "unofficial assets" (manually uploaded)
+        for f in os.listdir(self.assets_path()):
+            if os.path.isfile(f) and not f in self.available_assets:
+                self.available_assets.append(f)
         if commit: self.save()
 
     

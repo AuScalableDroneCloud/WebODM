@@ -242,6 +242,38 @@ class TaskViewSet(viewsets.ViewSet):
 
         return Response({'success': True}, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'])
+    def uploadasset(self, request, pk=None, project_pk=None):
+        """
+        Add an asset to a task
+        """
+        get_and_check_project(request, project_pk, ('change_project', ))
+        try:
+            task = self.queryset.get(pk=pk, project=project_pk)
+        except (ObjectDoesNotExist, ValidationError):
+            raise exceptions.NotFound()
+
+        files = flatten_files(request.FILES)
+
+        if len(files) == 0:
+            raise exceptions.ValidationError(detail=_("No files uploaded"))
+
+        #Just drops the files in the assets folder
+        for f in files:
+            #print("FILE UPLOAD:", str(f), f.temporary_file_path())
+            destination_file = task.assets_path(str(f))
+
+            with open(destination_file, 'wb+') as fd:
+                if isinstance(files[0], InMemoryUploadedFile):
+                    for chunk in files[0].chunks():
+                        fd.write(chunk)
+                else:
+                    with open(files[0].temporary_file_path(), 'rb') as file:
+                        copyfileobj(file, fd)
+
+        #Update the asset list and save
+        task.update_available_assets_field(commit=True)
+        return Response({'success': True}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'])
     def duplicate(self, request, pk=None, project_pk=None):
