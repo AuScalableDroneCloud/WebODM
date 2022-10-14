@@ -441,6 +441,7 @@ class ProjectListItem extends React.Component {
                       onClick={this.handleImportTask}>
                   <i className="glyphicon glyphicon-import"></i> {_("Import")}
                 </button>
+                {/* Load the plugin buttons... */}
                 {this.state.buttons.map((button, i) => <React.Fragment key={i}>{button}</React.Fragment>)}
               </div>
             : ""}

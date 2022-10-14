@@ -24,7 +24,6 @@ import Tus from '@uppy/tus'
 import Url from'@uppy/url'
 import DropTarget from'@uppy/drop-target'
 import GoldenRetriever from'@uppy/golden-retriever'
-//import XHRUpload from'@uppy/xhr-upload'
 
 class NewTaskPanel extends React.Component {
   static defaultProps = {
@@ -71,6 +70,8 @@ class NewTaskPanel extends React.Component {
       that.uppy.info(msg, 'error', 500)
     }
 
+    let tusd_endpoint = location.protocol + '//tusd.' + location.hostname + '/files/';
+    if (location.hostname.indexOf('localhost' >= 0)) tusd_endpoint = 'https://tusd.tusdemo.net/files/';
     this.uppy = new Uppy({autoProceed: true,
       /*disableThumbnailGenerator: true,
       showSelectedFiles: false,
@@ -99,12 +100,11 @@ class NewTaskPanel extends React.Component {
 
       }})
       .use(Webcam, {})
-      .use(Url, {companionUrl: 'https://companion.uppy.io'})
+      /*.use(Url, {companionUrl: 'https://companion.uppy.io'})
       .use(GoogleDrive, {companionUrl: 'https://companion.uppy.io'})
       .use(Dropbox, {companionUrl: 'https://companion.uppy.io'})
-      .use(OneDrive, {companionUrl: 'https://companion.uppy.io'})
-      .use(Tus, {endpoint: location.protocol + '//tusd.' + location.hostname + '/files/'})
-      //.use(XHRUpload, {endpoint: `/api/projects/${this.state.data.id}/tasks/${this.state.taskInfo.id}/upload/`})
+      .use(OneDrive, {companionUrl: 'https://companion.uppy.io'})*/
+      .use(Tus, {endpoint: tusd_endpoint})
 
     this.save = this.save.bind(this);
     this.handleFormTaskLoaded = this.handleFormTaskLoaded.bind(this);
