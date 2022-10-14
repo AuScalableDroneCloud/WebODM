@@ -61,7 +61,7 @@ module.exports = {
       },
       {
         test: /\.(png|jpg|jpeg|svg)/,
-        loader: "url-loader?limit=100000"
+        loader: "url-loader?limit=100000&esModule=false"
       },
       {
         // shaders
