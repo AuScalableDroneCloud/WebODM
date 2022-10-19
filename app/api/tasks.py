@@ -1,5 +1,6 @@
 import os
 import json
+import datetime
 from wsgiref.util import FileWrapper
 
 import mimetypes
@@ -267,7 +268,7 @@ class TaskViewSet(viewsets.ViewSet):
             with open(task.assets_path('metadata.json'), 'r') as jfile:
                 metadata = json.load(jfile)
         except:
-            metadata = {"custom_assets": []}
+            metadata = {"custom_assets": {}}
 
         #Just drops the files in the assets folder, can also pass subdir
         destpath = task.assets_path(directory)
@@ -284,7 +285,13 @@ class TaskViewSet(viewsets.ViewSet):
                         copyfileobj(file, fd)
 
             #Add the relative path to custom assets
-            metadata["custom_assets"].append(os.path.join(directory, str(f)))
+            fkey = os.path.join(directory, str(f))
+            try:
+                current = metadata["custom_assets"][fkey]
+            except KeyError:
+                current = {}
+            current["modified"] = datetime.datetime.now().isoformat()
+            metadata["custom_assets"][fkey] = current
 
         #Update metadata json
         with open(task.assets_path('metadata.json'), 'w') as outfile:
@@ -500,7 +507,7 @@ class TaskAssets(TaskNestedView):
                 with open(task.assets_path('metadata.json'), 'r') as jfile:
                     metadata = json.load(jfile)
             except:
-                metadata = {"custom_assets": []}
+                metadata = {"custom_assets": {}}
 
             metadata["files"] = [os.path.relpath(os.path.join(dp, f), task.task_path()) for dp, dn, filenames in os.walk(task.task_path()) for f in filenames]
 
