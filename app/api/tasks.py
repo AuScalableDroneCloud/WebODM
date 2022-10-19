@@ -244,63 +244,6 @@ class TaskViewSet(viewsets.ViewSet):
 
         return Response({'success': True}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['post'])
-    def uploadasset(self, request, pk=None, project_pk=None):
-        """
-        Add an asset to a task
-        """
-        directory = request.data.get('directory')
-        if not directory:
-            directory = ""
-        get_and_check_project(request, project_pk, ('change_project', ))
-        try:
-            task = self.queryset.get(pk=pk, project=project_pk)
-        except (ObjectDoesNotExist, ValidationError):
-            raise exceptions.NotFound()
-
-        files = flatten_files(request.FILES)
-
-        if len(files) == 0:
-            raise exceptions.ValidationError(detail=_("No files uploaded"))
-
-        #Get metadata json
-        try:
-            with open(task.assets_path('metadata.json'), 'r') as jfile:
-                metadata = json.load(jfile)
-        except:
-            metadata = {"custom_assets": {}}
-
-        #Just drops the files in the assets folder, can also pass subdir
-        destpath = task.assets_path(directory)
-        os.makedirs(destpath, exist_ok=True)
-        for f in files:
-            destination_file = os.path.join(destpath, str(f))
-
-            with open(destination_file, 'wb+') as fd:
-                if isinstance(files[0], InMemoryUploadedFile):
-                    for chunk in files[0].chunks():
-                        fd.write(chunk)
-                else:
-                    with open(files[0].temporary_file_path(), 'rb') as file:
-                        copyfileobj(file, fd)
-
-            #Add the relative path to custom assets
-            fkey = os.path.join(directory, str(f))
-            try:
-                current = metadata["custom_assets"][fkey]
-            except KeyError:
-                current = {}
-            current["modified"] = datetime.datetime.now().isoformat()
-            metadata["custom_assets"][fkey] = current
-
-        #Update metadata json
-        with open(task.assets_path('metadata.json'), 'w') as outfile:
-            json.dump(metadata, outfile)
-
-        #Update the asset list and save
-        task.update_available_assets_field(commit=True)
-        return Response({'success': True}, status=status.HTTP_200_OK)
-
     @action(detail=True, methods=['get'])
     def updateassets(self, request, pk=None, project_pk=None):
         """
@@ -516,6 +459,55 @@ class TaskAssets(TaskNestedView):
                 json.dump(metadata, outfile)
 
         return download_file_response(request, asset_path, 'inline')
+
+    def post(self, request, pk=None, project_pk=None, unsafe_asset_path=""):
+        """
+        Add an asset to a task
+        """
+        task = self.get_and_check_task(request, pk)
+
+        files = flatten_files(request.FILES)
+
+        if len(files) == 0:
+            raise exceptions.ValidationError(detail=_("No files uploaded"))
+
+        #Get metadata json
+        try:
+            with open(task.assets_path('metadata.json'), 'r') as jfile:
+                metadata = json.load(jfile)
+        except:
+            metadata = {"custom_assets": {}}
+
+        #Just drops the files in the assets folder, can also pass subdir
+        destpath = task.assets_path(unsafe_asset_path)
+        os.makedirs(destpath, exist_ok=True)
+        for f in files:
+            destination_file = os.path.join(destpath, str(f))
+
+            with open(destination_file, 'wb+') as fd:
+                if isinstance(files[0], InMemoryUploadedFile):
+                    for chunk in files[0].chunks():
+                        fd.write(chunk)
+                else:
+                    with open(files[0].temporary_file_path(), 'rb') as file:
+                        copyfileobj(file, fd)
+
+            #Add the relative path to custom assets
+            fkey = os.path.join(unsafe_asset_path, str(f))
+            try:
+                current = metadata["custom_assets"][fkey]
+            except KeyError:
+                current = {}
+            current["modified"] = datetime.datetime.now().isoformat()
+            metadata["custom_assets"][fkey] = current
+
+        #Update metadata json
+        with open(task.assets_path('metadata.json'), 'w') as outfile:
+            json.dump(metadata, outfile)
+
+        #Update the asset list and save
+        task.update_available_assets_field(commit=True)
+        return Response({'success': True}, status=status.HTTP_200_OK)
 
     def delete(self, request, pk=None, project_pk=None, unsafe_asset_path=""):
         """
