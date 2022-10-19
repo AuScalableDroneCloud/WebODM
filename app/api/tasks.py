@@ -1,4 +1,5 @@
 import os
+import json
 from wsgiref.util import FileWrapper
 
 import mimetypes
@@ -247,6 +248,9 @@ class TaskViewSet(viewsets.ViewSet):
         """
         Add an asset to a task
         """
+        directory = request.data.get('directory')
+        if not directory:
+            directory = ""
         get_and_check_project(request, project_pk, ('change_project', ))
         try:
             task = self.queryset.get(pk=pk, project=project_pk)
@@ -258,10 +262,18 @@ class TaskViewSet(viewsets.ViewSet):
         if len(files) == 0:
             raise exceptions.ValidationError(detail=_("No files uploaded"))
 
-        #Just drops the files in the assets folder
+        #Get metadata json
+        try:
+            with open(task.assets_path('metadata.json'), 'r') as jfile:
+                metadata = json.load(jfile)
+        except:
+            metadata = {"custom_assets": []}
+
+        #Just drops the files in the assets folder, can also pass subdir
+        destpath = task.assets_path(directory)
+        os.makedirs(destpath, exist_ok=True)
         for f in files:
-            #print("FILE UPLOAD:", str(f), f.temporary_file_path())
-            destination_file = task.assets_path(str(f))
+            destination_file = os.path.join(destpath, str(f))
 
             with open(destination_file, 'wb+') as fd:
                 if isinstance(files[0], InMemoryUploadedFile):
@@ -270,6 +282,29 @@ class TaskViewSet(viewsets.ViewSet):
                 else:
                     with open(files[0].temporary_file_path(), 'rb') as file:
                         copyfileobj(file, fd)
+
+            #Add the relative path to custom assets
+            metadata["custom_assets"].append(os.path.join(directory, str(f)))
+
+        #Update metadata json
+        with open(task.assets_path('metadata.json'), 'w') as outfile:
+            json.dump(metadata, outfile)
+
+        #Update the asset list and save
+        task.update_available_assets_field(commit=True)
+        return Response({'success': True}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['get'])
+    def updateassets(self, request, pk=None, project_pk=None):
+        """
+        Updates the available assets list,
+        call if assets have been changed to force an update
+        """
+        get_and_check_project(request, project_pk, ('change_project', ))
+        try:
+            task = self.queryset.get(pk=pk, project=project_pk)
+        except (ObjectDoesNotExist, ValidationError):
+            raise exceptions.NotFound()
 
         #Update the asset list and save
         task.update_available_assets_field(commit=True)
@@ -458,6 +493,20 @@ class TaskAssets(TaskNestedView):
 
         if (not os.path.exists(asset_path)) or os.path.isdir(asset_path):
             raise exceptions.NotFound(_("Asset does not exist"))
+
+        if unsafe_asset_path == "metadata.json":
+            #Update the current file list in metadata
+            try:
+                with open(task.assets_path('metadata.json'), 'r') as jfile:
+                    metadata = json.load(jfile)
+            except:
+                metadata = {"custom_assets": []}
+
+            metadata["files"] = [os.path.relpath(os.path.join(dp, f), task.task_path()) for dp, dn, filenames in os.walk(task.task_path()) for f in filenames]
+
+            #Update metadata json
+            with open(task.assets_path('metadata.json'), 'w') as outfile:
+                json.dump(metadata, outfile)
 
         return download_file_response(request, asset_path, 'inline')
 

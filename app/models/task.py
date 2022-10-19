@@ -1100,13 +1100,19 @@ class Task(models.Model):
         """
         all_assets = list(self.ASSETS_MAP.keys())
         self.available_assets = [asset for asset in all_assets if self.is_asset_available_slow(asset)]
-        #Get actual files present and add any that are "unofficial assets" (manually uploaded)
-        for f in os.listdir(self.assets_path()):
-            if os.path.isfile(f) and not f in self.available_assets:
-                self.available_assets.append(f)
+
+        #Get custom assets from metadata json
+        try:
+            with open(self.assets_path('metadata.json'), 'r') as jfile:
+                metadata = json.load(jfile)
+            for f in metadata["custom_assets"]:
+                if os.path.exists(self.assets_path(f)):
+                    self.available_assets.append(f)
+        except (FileNotFoundError) as e:
+            pass
+
         if commit: self.save()
 
-    
     def update_epsg_field(self, commit=False):
         """
         Updates the epsg field with the correct value
