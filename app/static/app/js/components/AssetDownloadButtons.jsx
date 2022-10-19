@@ -82,6 +82,10 @@ class AssetDownloadButtons extends React.Component {
                         </li>);
                 }
             })}
+            <li className="divider"></li>
+            <li key="images">
+              <a href={"/api/projects/" + this.props.task.project + "/tasks/" + this.props.task.id + "/images/download"}><i className="far fa-images fa-fw"></i>Input Images</a>
+            </li>
           </ul>
         </div>);
     }

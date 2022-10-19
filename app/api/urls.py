@@ -4,7 +4,7 @@ from app.api.presets import PresetViewSet
 from app.plugins.views import api_view_handler
 from .projects import ProjectViewSet
 from .tasks import TaskViewSet, TaskDownloads, TaskAssets, TaskAssetsImport
-from .imageuploads import Thumbnail, ImageDownload
+from .imageuploads import Thumbnail, ImageDownload, ImagesDownload
 from .processingnodes import ProcessingNodeViewSet, ProcessingNodeOptionsView
 from .admin import AdminUserViewSet, AdminGroupViewSet
 from rest_framework_nested import routers
@@ -46,6 +46,7 @@ urlpatterns = [
     url(r'projects/(?P<project_pk>[^/.]+)/tasks/import$', TaskAssetsImport.as_view()),
     url(r'projects/(?P<project_pk>[^/.]+)/tasks/(?P<pk>[^/.]+)/images/thumbnail/(?P<image_filename>.+)$', Thumbnail.as_view()),
     url(r'projects/(?P<project_pk>[^/.]+)/tasks/(?P<pk>[^/.]+)/images/download/(?P<image_filename>.+)$', ImageDownload.as_view()),
+    url(r'projects/(?P<project_pk>[^/.]+)/tasks/(?P<pk>[^/.]+)/images/download$', ImagesDownload.as_view()),
 
     url(r'projects/(?P<project_pk>[^/.]+)/tasks/(?P<pk>[^/.]+)/3d/scene$', Scene.as_view()),
     url(r'projects/(?P<project_pk>[^/.]+)/tasks/(?P<pk>[^/.]+)/3d/cameraview$', CameraView.as_view()),
