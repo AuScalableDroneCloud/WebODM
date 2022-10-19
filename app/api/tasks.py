@@ -517,6 +517,44 @@ class TaskAssets(TaskNestedView):
 
         return download_file_response(request, asset_path, 'inline')
 
+    def delete(self, request, pk=None, project_pk=None, unsafe_asset_path=""):
+        """
+        Deletes a task asset (if available)
+        """
+        task = self.get_and_check_task(request, pk)
+
+        # Check for directory traversal attacks
+        try:
+            asset_path = path_traversal_check(task.assets_path(unsafe_asset_path), task.assets_path(""))
+        except SuspiciousFileOperation:
+            raise exceptions.NotFound(_("Asset does not exist"))
+
+        if (not os.path.exists(asset_path)) or os.path.isdir(asset_path):
+            raise exceptions.NotFound(_("Asset does not exist"))
+
+        #return download_file_response(request, asset_path, 'inline')
+        filepath = task.assets_path(unsafe_asset_path)
+        if not os.path.exists(filepath):
+            raise exceptions.NotFound()
+
+        #Get metadata json
+        try:
+            with open(task.assets_path('metadata.json'), 'r') as jfile:
+                metadata = json.load(jfile)
+                del metadata["custom_assets"][filename]
+            #Update metadata json
+            with open(task.assets_path('metadata.json'), 'w') as outfile:
+                json.dump(metadata, outfile)
+        except:
+            pass
+
+        #Delete the file
+        os.remove(filepath)
+
+        #Update the asset list and save
+        task.update_available_assets_field(commit=True)
+        return Response({'success': True}, status=status.HTTP_200_OK)
+
 """
 Task assets import
 """
