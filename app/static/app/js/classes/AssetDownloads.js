@@ -25,7 +25,7 @@ class AssetDownload{
 
 class AssetDownloadSeparator extends AssetDownload{
   constructor(){
-    super("-");
+    super("-","all.zip");
   }
 
   downloadUrl(){
@@ -58,8 +58,6 @@ const api = {
       new AssetDownload(_("Camera Shots"),"shots.geojson","fa fa-camera"),
       new AssetDownload(_("Ground Control Points"),"ground_control_points.geojson","far fa-dot-circle"),
       new AssetDownload(_("Quality Report"),"report.pdf","far fa-file-pdf"),
-      
-      
       
       new AssetDownloadSeparator(),
       new AssetDownload(_("All Assets"),"all.zip","far fa-file-archive")
