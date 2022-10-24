@@ -30,7 +30,7 @@ RUN apt-get update; \
     # grab gosu for easy step-down from root
     # https://github.com/tianon/gosu/releases
 	apt-get update; \
-	apt-get install -y --no-install-recommends wget; \
+	apt-get install -y --no-install-recommends wget vim; \
 	rm -rf /var/lib/apt/lists/*; \
 	dpkgArch="$(dpkg --print-architecture | awk -F- '{ print $NF }')"; \
 	wget --no-check-certificate -O /usr/local/bin/gosu "https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$dpkgArch"; \
