@@ -29,7 +29,8 @@ jobs:
       run: |
         echo "One or more files in the db folder has changed."
         echo "List all the files that have changed: ${{ steps.changed-files-specific.outputs.all_changed_files }}"
-     outputs:
+
+    - outputs:
        db_changed: ${{ steps.changed-files-specific.outputs.any_changed }}
 
   build:
