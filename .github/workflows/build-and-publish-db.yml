@@ -29,8 +29,8 @@ jobs:
       run: |
         echo "One or more files in the db folder has changed."
         echo "List all the files that have changed: ${{ steps.changed-files-specific.outputs.all_changed_files }}"
-        echo "::set-output name=db_changed::True"
-        echo "db_changed=True" >> $GITHUB_OUTPUT
+     outputs:
+       db_changed: ${{ steps.changed-files-specific.outputs.any_changed }}
 
   build:
     name: Build and push Docker image to GitHub Packages
