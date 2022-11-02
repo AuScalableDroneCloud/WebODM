@@ -17,6 +17,15 @@ def get_plugins_css_includes():
     return "\n".join(map(lambda url: "<link href='{}' rel='stylesheet' type='text/css'>".format(url), css_urls))
 
 @register.simple_tag()
-def get_plugins_main_menus():
+def get_plugins_main_menus(user):
+    # Allows calling main_menu with user arg,
+    # while maintaining back compatability with
+    # plugins that don't need this arg
+    def get_menu(plugin, user):
+        menu = plugin.main_menu_user(user)
+        if not len(menu):
+            menu = plugin.main_menu()
+        return menu
+
     # Flatten list of menus
-    return list(itertools.chain(*[plugin.main_menu() for plugin in get_active_plugins()]))
+    return list(itertools.chain(*[get_menu(plugin, user) for plugin in get_active_plugins()]))

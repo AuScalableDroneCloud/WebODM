@@ -37,7 +37,7 @@
                 {% can_add_processing_nodes as add_nodes %}
                 {% get_visible_processing_nodes as nodes %}
 
-                {% get_plugins_main_menus as plugin_menus %}
+                {% get_plugins_main_menus user as plugin_menus %}
                 {% for menu in plugin_menus %}
                     <li>
                         <a href="{{menu.link}}"><i class="{{menu.css_icon}}"></i> {{menu.label}}{% if menu.has_submenu %}<span class="fa arrow"></span>{% endif %}</a>

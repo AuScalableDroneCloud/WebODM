@@ -180,6 +180,14 @@ class PluginBase(ABC):
         """
         return []
 
+    def main_menu_user(self, user):
+        """
+        Should be overriden by plugins that want to add
+        user specific items to the side menu.
+        :return: [] of Menu objects
+        """
+        return []
+
     def root_mount_points(self):
         """
         Should be overriden by plugins that want to 
