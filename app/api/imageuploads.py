@@ -12,6 +12,7 @@ from django.http import HttpResponse
 from .tasks import download_file_response, download_file_stream
 from .common import hex2rgb
 import numpy as np
+import json
 import logging
 logger = logging.getLogger('app.logger')
 
@@ -144,6 +145,15 @@ class Thumbnail(TaskNestedView):
             output.close()
 
             return res
+
+class ImageList(TaskNestedView):
+    def get(self, request, pk=None, project_pk=None):
+        """
+        Download a list of all task images
+        """
+        task = self.get_and_check_task(request, pk)
+        images = ImageUpload.objects.filter(task=task)
+        return HttpResponse(json.dumps([os.path.basename(i.path()) for i in images]), content_type='application/json')
 
 class ImageDownload(TaskNestedView):
     def get(self, request, pk=None, project_pk=None, image_filename=""):
