@@ -1101,9 +1101,9 @@ class Task(models.Model):
         all_assets = list(self.ASSETS_MAP.keys())
         self.available_assets = [asset for asset in all_assets if self.is_asset_available_slow(asset)]
 
-        #Get custom assets from metadata json
+        #Get custom assets from files json
         try:
-            with open(self.assets_path('metadata.json'), 'r') as jfile:
+            with open(self.assets_path('files.json'), 'r') as jfile:
                 metadata = json.load(jfile)
             for f in metadata["custom_assets"]:
                 if os.path.exists(self.assets_path(f)):

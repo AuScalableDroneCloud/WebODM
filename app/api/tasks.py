@@ -444,18 +444,18 @@ class TaskAssets(TaskNestedView):
         if (not os.path.exists(asset_path)) or os.path.isdir(asset_path):
             raise exceptions.NotFound(_("Asset does not exist"))
 
-        if unsafe_asset_path == "metadata.json":
-            #Update the current file list in metadata
+        if unsafe_asset_path == "files.json":
+            #Update the current file list metadata
             try:
-                with open(task.assets_path('metadata.json'), 'r') as jfile:
+                with open(task.assets_path('files.json'), 'r') as jfile:
                     metadata = json.load(jfile)
             except:
                 metadata = {"custom_assets": {}}
 
             metadata["files"] = [os.path.relpath(os.path.join(dp, f), task.task_path()) for dp, dn, filenames in os.walk(task.task_path()) for f in filenames]
 
-            #Update metadata json
-            with open(task.assets_path('metadata.json'), 'w') as outfile:
+            #Update files json
+            with open(task.assets_path('files.json'), 'w') as outfile:
                 json.dump(metadata, outfile)
 
         return download_file_response(request, asset_path, 'inline')
@@ -468,12 +468,13 @@ class TaskAssets(TaskNestedView):
 
         files = flatten_files(request.FILES)
 
+        #TODO: check and fail if unsafe_asset_path is not a subdir of assets (eg: ../ etc)
         if len(files) == 0:
             raise exceptions.ValidationError(detail=_("No files uploaded"))
 
-        #Get metadata json
+        #Get files json
         try:
-            with open(task.assets_path('metadata.json'), 'r') as jfile:
+            with open(task.assets_path('files.json'), 'r') as jfile:
                 metadata = json.load(jfile)
         except:
             metadata = {"custom_assets": {}}
@@ -501,8 +502,8 @@ class TaskAssets(TaskNestedView):
             current["modified"] = datetime.datetime.now().isoformat()
             metadata["custom_assets"][fkey] = current
 
-        #Update metadata json
-        with open(task.assets_path('metadata.json'), 'w') as outfile:
+        #Update files json
+        with open(task.assets_path('files.json'), 'w') as outfile:
             json.dump(metadata, outfile)
 
         #Update the asset list and save
@@ -529,13 +530,13 @@ class TaskAssets(TaskNestedView):
         if not os.path.exists(filepath):
             raise exceptions.NotFound()
 
-        #Get metadata json
+        #Get files json
         try:
-            with open(task.assets_path('metadata.json'), 'r') as jfile:
+            with open(task.assets_path('files.json'), 'r') as jfile:
                 metadata = json.load(jfile)
                 del metadata["custom_assets"][filename]
-            #Update metadata json
-            with open(task.assets_path('metadata.json'), 'w') as outfile:
+            #Update files json
+            with open(task.assets_path('files.json'), 'w') as outfile:
                 json.dump(metadata, outfile)
         except:
             pass
