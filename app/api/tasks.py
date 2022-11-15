@@ -441,9 +441,6 @@ class TaskAssets(TaskNestedView):
         except SuspiciousFileOperation:
             raise exceptions.NotFound(_("Asset does not exist"))
 
-        if (not os.path.exists(asset_path)) or os.path.isdir(asset_path):
-            raise exceptions.NotFound(_("Asset does not exist"))
-
         if unsafe_asset_path == "files.json":
             #Update the current file list metadata
             try:
@@ -457,6 +454,9 @@ class TaskAssets(TaskNestedView):
             #Update files json
             with open(task.assets_path('files.json'), 'w') as outfile:
                 json.dump(metadata, outfile)
+
+        if (not os.path.exists(asset_path)) or os.path.isdir(asset_path):
+            raise exceptions.NotFound(_("Asset does not exist"))
 
         return download_file_response(request, asset_path, 'inline')
 
