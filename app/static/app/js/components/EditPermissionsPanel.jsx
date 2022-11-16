@@ -212,6 +212,7 @@ class EditPermissionsPanel extends React.Component {
         <div className="permission">
             <div className="username-container">
                 <i className="fa fa-user user-indicator"/>
+                <input name = "DummyUsername" type="text" style={{display:"none"}}/>
                 <input 
                     style={{color: this.getColorFor(p.username)}}
                     onChange={this.handleChangePermissionUser(p)} 
