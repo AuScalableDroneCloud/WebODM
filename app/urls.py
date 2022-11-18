@@ -43,6 +43,7 @@ urlpatterns = [
 
     url(r'^plugins/(?P<plugin_name>[^/.]+)/(.*)$', app_view_handler),
 
+    url(r'^userguide/$', app_views.userguide, name='userguide'),
     url(r'^about/$', app_views.about, name='about'),
     url(r'^dev-tools/(?P<action>.*)$', dev_views.dev_tools, name='dev_tools'),
 

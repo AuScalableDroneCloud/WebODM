@@ -112,6 +112,9 @@ def model_display(request, project_pk=None, task_pk=None):
             }.items()
         })
 
+def userguide(request):
+    return render(request, 'app/userguide.html', {'title': _('User Guide'), 'version': settings.VERSION})
+
 def about(request):
     return render(request, 'app/about.html', {'title': _('About'), 'version': settings.VERSION})
 

@@ -1,0 +1,44 @@
+{% extends "app/logged_in_base.html" %}
+{% load i18n %}
+
+{% block content %}
+
+ 
+<style>
+    html {
+      height: 100%;
+      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+      overflow: hidden;
+    }
+    
+    .user-guide-text{
+        z-index: 2; 
+        position: absolute;
+        margin-right: 12px;
+    }
+</style>
+
+{% load i18n %}
+
+<div class="user-guide-text">
+    <h2 class="theme-secondary">User Guide - ASDC {{ version }}</h2>
+    <h3 class="theme-secondary">Basics</h3>
+    
+    <div class="theme-secondary">
+      To create a new project, press the "Add Project" button.<br>
+      To create a map, press the "Upload Data" button. Then select "browse files" to select files, "browse folders" to select a folder or drag and drop images.<br>
+				For further assistance, click the "User Guide" button on the menu to the left.
+			</p>
+			<p>
+				<ul>
+					<li>You need at least 5 images, but 16-32 is typically the minimum.</li>
+					<li>Images must overlap by 65% or more. Aim for 70-72%</li>
+                    <li>For great 3D, images must overlap by 83%</li>
+					<li><a href="https://github.com/OpenDroneMap/OpenDroneMap/wiki/Running-OpenDroneMap#running-odm-with-ground-control" target="_blank">GCP File</a> is optional, but can increase georeferencing accuracy</li>
+				</ul>
+    </div>
+
+    <h3 class="theme-secondary">TODO: complete user guide</h3>
+</div>
+
+{% endblock %}

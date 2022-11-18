@@ -25,9 +25,11 @@
 		
 		{% if no_tasks %}
 			<h3>{% trans 'Welcome!' %} ☺</h3>
-			{% trans 'Select Images and GCP' as upload_images %}
+			{% trans 'Upload Data' as upload_data %}
 			<p>
-				{% blocktrans %}To create a map, press the "{{ upload_images }}" button, or drag and drop some images into a project.{% endblocktrans %}
+      {% blocktrans %}To create a new project, press the "Add Project" button.{% endblocktrans %}<br>
+      {% blocktrans %}To create a map, press the "{{ upload_data }}" button. Then select "browse files" to select files, "browse folders" to select a folder or drag and drop images.{% endblocktrans %}<br>
+				{% blocktrans %}For further assistance, click the "User Guide" button on the menu to the left.{% endblocktrans %}
 			</p>
 			<p>
 				<ul>
