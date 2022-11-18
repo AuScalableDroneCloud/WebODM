@@ -11,6 +11,7 @@ from shlex import quote
 import errno
 import piexif
 import re
+import datetime
 
 import zipfile
 import rasterio
@@ -604,13 +605,20 @@ class Task(models.Model):
         self.save()
 
         zip_path = self.assets_path("all.zip")
+        if self.import_url:
+            #If not a .zip, use the original filename
+            filename = self.assets_path(self.import_url.rsplit('/', 1)[-1])
+            _, file_extension = os.path.splitext(filename)
+            if file_extension.lower != ".zip":
+                zip_path = filename
+
         # Import assets file from mounted system volume (media-dir)/imports by relative path.
         # Import file from relative path.
         if self.import_url and not os.path.exists(zip_path):
             if self.import_url.startswith("file://"):
                 imports_folder_path = os.path.join(settings.MEDIA_ROOT, "imports")
                 unsafe_path_to_import_file = os.path.join(settings.MEDIA_ROOT, "imports", self.import_url.replace("file://", ""))
-                # check is file placed in shared media folder in /imports directory without traversing
+                # check if file placed in shared media folder in /imports directory without traversing
                 try:
                     checked_path_to_file = path_traversal_check(unsafe_path_to_import_file, imports_folder_path)
                     if os.path.isfile(checked_path_to_file):
@@ -971,14 +979,39 @@ class Task(models.Model):
         assets_dir = self.assets_path("")
         zip_path = self.assets_path("all.zip")
 
-        # Extract from zip
-        with zipfile.ZipFile(zip_path, "r") as zip_h:
-            zip_h.extractall(assets_dir)
+        if os.path.exists(zip_path):
+            # Extract from zip
+            with zipfile.ZipFile(zip_path, "r") as zip_h:
+                zip_h.extractall(assets_dir)
+            logger.info("Extracted all.zip for {}".format(self))
+            # Remove zip
+            os.remove(zip_path)
+        else:
+            logger.info("No zip file found, assuming raw assets")
 
-        logger.info("Extracted all.zip for {}".format(self))
+            #Update files.json
+            metadata = {"custom_assets": {}}
 
-        # Remove zip
-        os.remove(zip_path)
+            #List of supported single file imports and their dest locations
+            #(only orthophoto.tif for now, anything else will be a custom asset)
+            known_files = {"orthophoto.tif" : "odm_orthophoto/odm_orthophoto.tif"}
+            #If not in known files, add a custom asset
+            for f in os.listdir(self.assets_path()):
+                if f in known_files:
+                    src = self.assets_path(f)
+                    dst = self.assets_path(known_files[f])
+                    dstdir = os.path.dirname(dst)
+                    if os.path.exists(src):
+                        logger.info(f"Importing {src} as {dst}")
+                        os.makedirs(dstdir, exist_ok=True)
+                        shutil.move(src, dst)
+                else:
+                    logger.info(f"Importing {f} as custom asset")
+                    metadata["custom_assets"][f] = {"modified" : datetime.datetime.now().isoformat()}
+
+            #Update files json
+            with open(self.assets_path('files.json'), 'w') as outfile:
+                json.dump(metadata, outfile)
 
         # Populate *_extent fields
         extent_fields = [
@@ -1110,6 +1143,8 @@ class Task(models.Model):
                     self.available_assets.append(f)
         except (FileNotFoundError) as e:
             pass
+        except Exception as e:
+            logger.warning(e)
 
         if commit: self.save()
 

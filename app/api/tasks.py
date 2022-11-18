@@ -468,7 +468,6 @@ class TaskAssets(TaskNestedView):
 
         files = flatten_files(request.FILES)
 
-        #TODO: check and fail if unsafe_asset_path is not a subdir of assets (eg: ../ etc)
         if len(files) == 0:
             raise exceptions.ValidationError(detail=_("No files uploaded"))
 
@@ -558,9 +557,17 @@ class TaskAssetsImport(APIView):
     def post(self, request, project_pk=None):
         project = get_and_check_project(request, project_pk, ('change_project',))
 
-        files = flatten_files(request.FILES)
         import_url = request.data.get('url', None)
         task_name = request.data.get('name', _('Imported Task'))
+
+        files = flatten_files(request.FILES)
+        if len(files) > 0:
+            filename, file_extension = os.path.splitext(files[0].name)
+            import_fn = "all.zip"
+            #If not a .zip, use the original filename
+            if file_extension.lower() != ".zip":
+                import_fn = files[0].name
+                task_name += " : " + import_fn #Doesn't seem to be using task_name, check
 
         if not import_url and len(files) != 1:
             raise exceptions.ValidationError(detail=_("Cannot create task, you need to upload 1 file"))
@@ -572,13 +579,13 @@ class TaskAssetsImport(APIView):
             task = models.Task.objects.create(project=project,
                                               auto_processing_node=False,
                                               name=task_name,
-                                              import_url=import_url if import_url else "file://all.zip",
+                                              import_url=import_url if import_url else f"file://{import_fn}",
                                               status=status_codes.RUNNING,
                                               pending_action=pending_actions.IMPORT)
             task.create_task_directories()
 
             if len(files) > 0:
-                destination_file = task.assets_path("all.zip")
+                destination_file = task.assets_path(import_fn)
 
                 with open(destination_file, 'wb+') as fd:
                     if isinstance(files[0], InMemoryUploadedFile):

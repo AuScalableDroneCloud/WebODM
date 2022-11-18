@@ -46,7 +46,7 @@ class ImportTaskPanel extends React.Component {
           parallelUploads: 1,
           maxFilesize: 2147483647,
           uploadMultiple: false,
-          acceptedFiles: "application/zip,application/octet-stream,application/x-zip-compressed,multipart/x-zip",
+          acceptedFiles: "application/zip,application/octet-stream,application/x-zip-compressed,multipart/x-zip,video/*,image/*",
           autoProcessQueue: true,
           createImageThumbnails: false,
           previewTemplate: '<div style="display:none"></div>',

@@ -60,6 +60,9 @@ class AssetDownloadButtons extends React.Component {
                 <span className="caret"></span>
           </button> : ""}
           <ul className="dropdown-menu">
+              <li key="files">
+                <a href={"/api/projects/" + this.props.task.project + "/tasks/" + this.props.task.id + "/assets/files.json"}><i className="fas fa-list fa-fw"></i>File List</a>
+              </li>
             {assetDownloads.map((asset, i) => {
                 if (asset.separator){
                     return (<li key={i} className="divider"></li>);
