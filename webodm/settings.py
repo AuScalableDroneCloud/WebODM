@@ -54,6 +54,11 @@ DEBUG = os.environ.get('WO_DEBUG', 'YES') == 'YES' or TESTING
 DEV = os.environ.get('WO_DEV', 'NO') == 'YES' and not TESTING
 DEV_WATCH_PLUGINS = DEV and os.environ.get('WO_DEV_WATCH_PLUGINS', 'NO') == 'YES'
 SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = os.environ.get('WO_SSL', 'NO') == 'YES'
+#Cookies on subdomains
+#https://docs.djangoproject.com/en/4.1/ref/settings/#std-setting-SESSION_COOKIE_DOMAIN
+SESSION_COOKIE_NAME = "asdc_sessionid" #Changing this so below setting change doesn't cause login issues
+SESSION_COOKIE_DOMAIN = os.environ.get('WO_HOST', 'localhost:8000')
+#SESSION_COOKIE_DOMAIN = "." + os.environ.get('WO_HOST', 'localhost:8000')
 INTERNAL_IPS = ['127.0.0.1']
 
 ALLOWED_HOSTS = ['*']
