@@ -57,7 +57,8 @@ SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = os.environ.get('WO_SSL', 'NO') == '
 #Cookies on subdomains
 #https://docs.djangoproject.com/en/4.1/ref/settings/#std-setting-SESSION_COOKIE_DOMAIN
 SESSION_COOKIE_NAME = "asdc_sessionid" #Changing this so below setting change doesn't cause login issues
-SESSION_COOKIE_DOMAIN = os.environ.get('WO_HOST', 'localhost:8000')
+hostname = os.environ.get('WO_HOST', 'localhost:8000')
+SESSION_COOKIE_DOMAIN = hostname
 INTERNAL_IPS = ['127.0.0.1']
 
 ALLOWED_HOSTS = ['*']
@@ -96,6 +97,7 @@ PLUGINS_BLACKLIST = [
 FORCE_MEDIA_STATICFILES = False
 
 # AUTH0 Settings
+#https://python-social-auth.readthedocs.io/en/latest/configuration/settings.html
 SOCIAL_AUTH_TRAILING_SLASH = False  # Remove trailing slash from routes
 SOCIAL_AUTH_AUTH0_DOMAIN = os.environ.get("WO_AUTH0_DOMAIN", "au-scalable-drone-cloud.au.auth0.com")
 SOCIAL_AUTH_AUTH0_KEY = os.environ.get("WO_AUTH0_KEY", "be8iHLsWn2t6ZsyZh0UofW1oaWScfsfC")
@@ -105,6 +107,7 @@ SOCIAL_AUTH_AUTH0_SCOPE = [
     'profile',
     'email'
 ]
+SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS = [f'terria.{hostname}', f'cesium.{hostname}', f'jupyter.{hostname}']
 
 SOCIAL_AUTH_PIPELINE = (
   'social_core.pipeline.social_auth.social_details',
@@ -367,11 +370,10 @@ REST_FRAMEWORK = {
   'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
 }
 
-audience = os.environ.get('WO_HOST', 'localhost:8000')
 if os.environ.get('WO_SSL', 'NO') == 'YES':
-    audience = 'https://' + audience + '/api'
+    audience = f'https://{hostname}/api'
 else:
-    audience = 'http://' + audience + '/api'
+    audience = f'http://{hostname}/api'
 
 JWT_AUTH = {
     'JWT_EXPIRATION_DELTA': datetime.timedelta(hours=6),
