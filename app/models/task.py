@@ -68,6 +68,14 @@ def assets_directory_path(taskId, projectId, filename):
 def gcp_directory_path(task, filename):
     return assets_directory_path(task.id, task.project.id, filename)
 
+def wait_for_sync(fn, timeout=30):
+    # Until S3/swift storage supported natively, 
+    # we may need to wait until the uploaded file appears
+    # as worker process will not see it until sync finishes
+    timeout = time.time() + timeout   # Default 30 seconds from now
+    while not os.path.exists(fn) and time.time() < timeout:
+        logger.info(f"File not yet synched {fn}, sleeping")
+        sleep(1)
 
 def validate_task_options(value):
     """
@@ -1001,10 +1009,10 @@ class Task(models.Model):
                     src = self.assets_path(f)
                     dst = self.assets_path(known_files[f])
                     dstdir = os.path.dirname(dst)
-                    if os.path.exists(src):
-                        logger.info(f"Importing {src} as {dst}")
-                        os.makedirs(dstdir, exist_ok=True)
-                        shutil.move(src, dst)
+                    wait_for_sync(src)
+                    logger.info(f"Importing {src} as {dst}")
+                    os.makedirs(dstdir, exist_ok=True)
+                    shutil.move(src, dst)
                 else:
                     logger.info(f"Importing {f} as custom asset")
                     metadata["custom_assets"][f] = {"modified" : datetime.datetime.now().isoformat()}
