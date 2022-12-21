@@ -8,9 +8,9 @@ from social_core import exceptions as social_exceptions
 class SocialAuthExceptionMiddleware(SocialAuthExceptionMiddleware):
     def process_exception(self, request, exception):
         #if isinstance(exception, SocialAuthBaseException):
-        if hasattr(social_exceptions, 'AuthCanceled'):
+        if type(exception) == social_exceptions.AuthCanceled:
             msg = """
-            <h1>Error</h1>
+            <h1>Auth Error</h1>
             <h2>{}</h2>
             <p>If this error relates to your email not having been verified, the verification email has been resent, 
             it may take a few minutes to arrive, check your inbox and follow the link provided before logging in again.</p>
