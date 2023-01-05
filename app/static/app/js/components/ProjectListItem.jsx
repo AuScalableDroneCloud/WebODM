@@ -434,7 +434,7 @@ class ProjectListItem extends React.Component {
                       onClick={this.handleUpload}
                       ref={this.setRef("uploadButton")}>
                   <i className="glyphicon glyphicon-upload"></i>
-                  {_("Upload Data")}
+                  {_("Upload Images")}
                 </button>
                 <button type="button" 
                       className="btn btn-default btn-sm"
