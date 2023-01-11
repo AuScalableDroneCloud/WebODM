@@ -46,6 +46,8 @@ from django.utils.translation import gettext_lazy as _, gettext
 
 from functools import partial
 import subprocess
+import s3fs
+s3 = None
 
 logger = logging.getLogger('app.logger')
 
@@ -109,6 +111,7 @@ def pull_image(image, task_folder, done=None):
 
         #Stored as upload URL instead of local path with original filename after #
         fp = image.image.name
+        filename = os.path.basename(fp)
         logger.info(f"Pulling image, name: {fp}")
         if '#' in fp:
             uploadURL, filename = fp.rsplit('#', 1)
@@ -127,17 +130,59 @@ def pull_image(image, task_folder, done=None):
             #No url, just a pathname that should already exist
             uploadURL = ""
 
-        if not os.path.exists(fp):
+        #if not os.path.exists(fp):
+        if True: #Check url for 404 instead?
             logger.info(f"- downloading to {fp}")
+            logger.info(f"-- task folder {task_folder} filename {filename} endpoint {settings.AWS_S3_ENDPOINT_URL} bucket {settings.AWS_STORAGE_BUCKET_NAME}")
             try:
+                sfp = os.path.join(settings.AWS_STORAGE_BUCKET_NAME, task_folder, filename)
                 download_stream = requests.get(uploadURL, stream=True, timeout=60)
+                global s3
+                if s3 is None:
+                    s3 = s3fs.S3FileSystem(anon=False, client_kwargs={'endpoint_url': settings.AWS_S3_ENDPOINT_URL})
+                ddir = os.path.dirname(sfp)
+                logger.info(f"- makedirs {ddir}")
+                s3.makedirs(ddir)
+                '''
+                logger.info(f"- open {sfp}")
+                #block_size = 5 * (1024 ** 2)
+                with s3.open(sfp, 'wb', block_size=block_size) as fd:
+                    logger.info(f"- opened {sfp}")
+                    for chunk in download_stream.iter_content(1024*200):
+                        logger.info(f"- write chunk {c}")
+                        #Why is this throwing errors? 22 OSError - only when files exceed 5MB!?
+                        fd.write(chunk)
+                logger.info(f"- done {sfp}")
+                #Return the filename in s3 store incl bucket
+                #https://s3.region-code.amazonaws.com/bucket-name/key-name
+                #retval = os.path.join(settings.AWS_S3_ENDPOINT_URL, settings.AWS_STORAGE_BUCKET_NAME, task_folder, filename)
+                retval = os.path.join(task_folder, filename)
+                logger.info(f"- WROTE {sfp} as {retval}")
+                #Filename should already be an s3 url?
+                #retval = filename
+                '''
+                import tempfile
+                tmp = tempfile.NamedTemporaryFile()
+                fp = tmp.name
+
+                logger.info(f"- save to tempfile {fp}")
                 with open(fp, 'wb') as fd:
-                    for chunk in download_stream.iter_content(4096):
+                    for chunk in download_stream.iter_content(4096*100):
                         fd.write(chunk)
                 #Return the RELATIVE download dest path
+                #retval = os.path.join(task_folder, filename)
+
+                logger.info(f"- open {sfp}")
+                s3.put(fp, sfp)
+                #retval = sfp #os.path.join(task_folder, filename)
                 retval = os.path.join(task_folder, filename)
+                logger.info(f"- done, returning {retval}")
+
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                logger.warning(f"Error occurred: {e}")
                 logger.warning(f"Error downloading image {filename} from {uploadURL}")
+            except (Exception) as e:
+                logger.error(f"Error occurred: {e}")
         else:
             #Return the recomputed RELATIVE path in case the original was malformed
             retval = os.path.join(task_folder, filename)
@@ -753,10 +798,10 @@ class Task(models.Model):
                     images = [image.path() for image in self.imageupload_set.all()]
 
                     #Check for urls remaining in image paths
-                    if any("https:" in image for image in images):
+                    if any("https://tusd" in image for image in images):
                         logger.warning("URL FOUND IN IMAGES! - reprocessing from pull")
                         for image in images:
-                            if "https:" in image:
+                            if "https://tusd" in image:
                                 logger.warning(f" - Problem image entry: {image}")
 
                         self.pending_action = pending_actions.PULL
@@ -764,7 +809,15 @@ class Task(models.Model):
 
                     #FAILSAFE: ensure all images files now exist, discard any missing
                     i1 = len(images)
-                    images = [image for image in images if os.path.exists(image)]
+                    logger.info(str(images))
+                    #images = [image for image in images if os.path.exists(image)]
+                    global s3
+                    if s3 is None:
+                        s3 = s3fs.S3FileSystem(anon=False, client_kwargs={'endpoint_url': settings.AWS_S3_ENDPOINT_URL})
+                    #Generate urls (these will expire, could cause issues...)
+                    images = [image.url() for image in self.imageupload_set.all() if s3.exists(image.path())]
+                    #images = [image.url() for image in self.imageupload_set.all()]
+
                     i2 = len(images)
                     if i2 < i1:
                         logger.warning(f"Some images not found! uploaded: {i1} > found: {i2}!")
@@ -918,10 +971,12 @@ class Task(models.Model):
                             assets_dir = self.assets_path("")
 
                             # Remove previous assets directory
+                            #(TODO: S3 equivalent)
                             if os.path.exists(assets_dir):
                                 logger.info("Removing old assets directory: {} for {}".format(assets_dir, self))
                                 shutil.rmtree(assets_dir)
 
+                            #(TODO: S3 equivalent)
                             os.makedirs(assets_dir)
 
                             # Download and try to extract results up to 4 times
@@ -979,6 +1034,7 @@ class Task(models.Model):
             logger.warning("{} interrupted".format(self, str(e)))
 
     def extract_assets_and_complete(self):
+        #(TODO: S3 equivalent)
         """
         Extracts assets/all.zip, populates task fields where required and assure COGs
         It will raise a zipfile.BadZipFile exception is the archive is corrupted.

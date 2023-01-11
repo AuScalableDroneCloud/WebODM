@@ -74,6 +74,13 @@ stop_scheduler(){
 	fi
 }
 
+#Set AWS S3 params
+export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
+export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+export AWS_REGION="$AWS_REGION"
+export AWS_ENDPOINT="$AWS_ENDPOINT"
+export AWS_IMAGE_BUCKET="$AWS_IMAGE_BUCKET"
+
 if [[ $1 = "start" ]]; then
 	environment_check
 	start

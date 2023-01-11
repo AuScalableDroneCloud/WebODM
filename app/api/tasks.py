@@ -1,4 +1,6 @@
 import os
+import logging
+logger = logging.getLogger('app.logger')
 import json
 import datetime
 from wsgiref.util import FileWrapper
@@ -11,6 +13,8 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.db import transaction
 from django.http import FileResponse
 from django.http import HttpResponse
+from django.shortcuts import redirect
+from django.core.files.storage import default_storage
 from rest_framework import status, serializers, viewsets, filters, exceptions, permissions, parsers
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
@@ -25,6 +29,7 @@ from .common import get_and_check_project, get_asset_download_filename
 from app.security import path_traversal_check
 from django.utils.translation import gettext_lazy as _
 
+from webodm import settings
 
 def flatten_files(request_files):
     # MultiValueDict in, flat array of files out
@@ -238,6 +243,7 @@ class TaskViewSet(viewsets.ViewSet):
             for image in files:
                 #Append the original filename to url
                 imageurl = image["uploadURL"] + '#' + image["name"]
+                logger.info("uploadURL: " + imageurl)
                 models.ImageUpload.objects.create(task=task, image=imageurl)
 
         task.create_task_directories()
@@ -356,8 +362,12 @@ class TaskNestedView(APIView):
 
         return task
 
-
 def download_file_response(request, filePath, content_disposition, download_filename=None):
+    relPath = os.path.relpath(filePath, start=settings.MEDIA_ROOT)
+    print("DOWNLOAD: ", relPath)
+    asset = default_storage.url(relPath)
+    return redirect(asset)
+
     filename = os.path.basename(filePath)
     if download_filename is None: 
         download_filename = filename

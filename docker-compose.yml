@@ -39,6 +39,12 @@ services:
       - WO_AUTH0_KEY
       - WO_AUTH0_SECRET
       - WO_ENCRYPTION_KEY
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_REGION
+      - AWS_ENDPOINT
+      - AWS_IMAGE_BUCKET
+      - AWS_STORAGE_BUCKET
     restart: unless-stopped
     oom_score_adj: 0
   broker:
