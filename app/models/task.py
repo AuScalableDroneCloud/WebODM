@@ -539,11 +539,13 @@ class Task(models.Model):
                     img.task = task
 
                     prev_name = img.image.name
-                    img.image.name = assets_directory_path(task.id, task.project.id,
-                                                            os.path.basename(img.image.name))
+                    #Just use the source task image path - works as long as source task is not deleted
+                    #img.image.name = assets_directory_path(task.id, task.project.id,
+                    #                                        os.path.basename(img.image.name))
                     
                     img.save()
-
+                #Disable copying, no need to copy assets anyway and using existing image paths above
+                """
                 if os.path.isdir(self.task_path()):
                     try:
                         # Try to use hard links first
@@ -556,6 +558,9 @@ class Task(models.Model):
                         copy_tree(self.task_path(), task.task_path(), preserve_mode=0, preserve_times=0, preserve_symlinks=0, update=0)
                 else:
                     logger.warning("Task {} doesn't have folder, will skip copying".format(self))
+                """
+                #Update assets as we skip duplicating
+                task.update_available_assets_field(commit=True)
             return task
         except Exception as e:
             logger.warning("Cannot duplicate task: {}".format(str(e)))
