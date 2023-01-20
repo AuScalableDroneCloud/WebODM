@@ -452,6 +452,7 @@ class TaskAssets(TaskNestedView):
             metadata["files"] = [os.path.relpath(os.path.join(dp, f), task.task_path()) for dp, dn, filenames in os.walk(task.task_path()) for f in filenames]
 
             #Update files json
+            os.makedirs(task.assets_path(), exist_ok=True)
             with open(task.assets_path('files.json'), 'w') as outfile:
                 json.dump(metadata, outfile)
 
