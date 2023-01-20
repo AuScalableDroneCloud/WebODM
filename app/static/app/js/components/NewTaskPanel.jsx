@@ -77,7 +77,7 @@ class NewTaskPanel extends React.Component {
       showSelectedFiles: false,
       closeAfterFinish: true,
       showRemoveButtonAfterComplete: true,*/
-      restrictions: {allowedFileTypes : ['image/*', '.txt', '.zip']},
+      restrictions: {allowedFileTypes : ['image/*', '.txt', '.zip', '.las', '.laz']},
       onBeforeFileAdded: (currentFile, files) => {
         //Filter dotfiles
         if (currentFile.name[0] === '.') {
