@@ -144,9 +144,24 @@ class TaskViewSet(viewsets.ViewSet):
         except (ObjectDoesNotExist, ValidationError):
             raise exceptions.NotFound()
 
+        output = ""
+        if task.processing_node and task.uuid and task.status == status_codes.RUNNING:
+            # Update task info from processing node
+            info = task.processing_node.get_task_info(task.uuid, 0)
+
+            if len(info.output) > 0:
+                output = "\n".join(info.output) + '\n'
+
+        elif task.console_output:
+            output = task.console_output
+
         line_num = max(0, int(request.query_params.get('line', 0)))
-        output = task.console_output or ""
-        return Response('\n'.join(output.rstrip().split('\n')[line_num:]))
+        data = '\n'.join(output.rstrip().split('\n')[line_num:])
+
+        if request.query_params.get('text', False):
+            return HttpResponse(data, content_type='text/plain; charset=UTF-8')
+        else:
+            return Response(data)
 
     def list(self, request, project_pk=None):
         get_and_check_project(request, project_pk)
