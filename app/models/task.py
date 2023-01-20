@@ -906,11 +906,13 @@ class Task(models.Model):
                     self.processing_time = info.processing_time
                     self.status = info.status.value
 
-                    if len(info.output) > 0:
-                        self.console_output += "\n".join(info.output) + '\n'
-
                     # Update running progress
+                    last_progress = self.running_progress
                     self.running_progress = (info.progress / 100.0) * self.TASK_PROGRESS_LAST_VALUE
+
+                    #Only update the db field when progress changes
+                    if len(info.output) > 0 and int(last_progress) > int(self.running_progress):
+                        self.console_output += "\n".join(info.output) + '\n'
 
                     if info.last_error != "":
                         self.last_error = info.last_error
