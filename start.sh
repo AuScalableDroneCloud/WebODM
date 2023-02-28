@@ -1,4 +1,8 @@
 #!/bin/bash
+#Fix for FileNotFoundError: [Errno 2] No such file or directory: '/usr/bin/pip3.9'
+#https://github.com/pypa/pip/issues/11309
+pip config set global.disable-pip-version-check true
+
 __dirname=$(cd $(dirname "$0"); pwd -P)
 cd ${__dirname}
 
