@@ -725,6 +725,7 @@ class Task(models.Model):
 
             if self.pending_action == pending_actions.RESIZE:
                 resized_images = self.resize_images()
+                resized_images = [r for r in resized_images if r is not None]
                 self.refresh_from_db()
                 self.resize_gcp(resized_images)
                 self.pending_action = None
