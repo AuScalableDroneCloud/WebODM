@@ -22,7 +22,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 # Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/1.10/howto/deployment/checklist/
+# See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'  #3.2
 
 try:
     from .secret_key import SECRET_KEY
@@ -217,7 +218,7 @@ AUTHENTICATION_BACKENDS = (
 # https://docs.djangoproject.com/en/1.10/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = tzlocal.get_localzone().zone
+TIME_ZONE = str(tzlocal.get_localzone())
 USE_I18N = True
 USE_L10N = True
 USE_TZ = True
