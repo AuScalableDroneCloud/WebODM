@@ -10,7 +10,7 @@ django-codemirror2==0.2
 django-colorfield==0.8.0
 django-compressor==4.3.1 #2.4.1
 django-cors-headers==3.13.0
-#django-filter==21.1 #Later versions break field filters
+django-filter==21.1 #Later versions break field filters
 django-guardian==2.4.0
 django-imagekit==4.1.0
 django-libsass==0.9
