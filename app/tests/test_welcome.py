@@ -3,6 +3,8 @@ from django.test import Client
 
 from app.models import Project
 from .classes import BootTestCase
+from rest_framework import status
+from webodm import settings
 
 
 class TestWelcome(BootTestCase):
@@ -66,8 +68,15 @@ class TestWelcome(BootTestCase):
 
         # If we log-out and try to access the welcome page, we should get the login page
         c.logout()
-        res = c.get('/welcome/', follow=True)
-        self.assertRedirects(res, '/login/')
+        if hasattr(settings, 'SOCIAL_AUTH_AUTH0_DOMAIN'):
+            #Test without follow
+            res = c.get('/welcome/')
+            self.assertTrue(res.status_code == status.HTTP_302_FOUND)
+            res = c.get('/welcome/', follow=True)
+        else:
+            #Test with follow
+            res = c.get('/welcome/', follow=True)
+            self.assertRedirects(res, '/login/')
 
         # We're not logged-in
         self.assertFalse(res.context['user'].is_authenticated)

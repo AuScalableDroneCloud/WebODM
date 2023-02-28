@@ -31,7 +31,7 @@ def copymerge(src, dst, symlinks=False, ignore=None):
             shutil.copy2(s, d)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: u.is_superuser, login_url='/login')
 def dev_tools(request, action):
     if not settings.DEV:
         raise Http404()
