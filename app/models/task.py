@@ -685,6 +685,8 @@ class Task(models.Model):
             self.extract_assets_and_complete()
         except zipfile.BadZipFile:
             raise NodeServerError(gettext("Invalid zip file"))
+        except Exception as e:
+            raise NodeServerError(gettext(f"Invalid asset, exception: {e}"))
 
         images_json = self.assets_path("images.json")
         if os.path.exists(images_json):
