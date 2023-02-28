@@ -413,7 +413,7 @@ run_tests(){
         run "npm run test"
 
         echo "\033[1mRunning backend tests\033[0m"
-        run "python manage.py test"
+        run "python manage.py test --failfast"
 
         echo ""
         echo -e "\033[1mDone!\033[0m Everything looks in order."
