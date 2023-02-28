@@ -567,7 +567,8 @@ class Task(models.Model):
                 else:
                     logger.warning("Task {} doesn't have folder, will skip copying".format(self))
                 """
-                #Update assets as we skip duplicating
+                #Create dirs and update assets as we skip duplicating
+                task.create_task_directories()
                 task.update_available_assets_field(commit=True)
             return task
         except Exception as e:
