@@ -4,10 +4,22 @@ module.exports = {
     "^.*\\.s?css$": "<rootDir>/app/static/app/js/tests/mocks/empty.scss.js",
     "jquery": "<rootDir>/app/static/app/js/vendor/jquery-1.11.2.min.js",
     "SystemJS": "<rootDir>/app/static/app/js/tests/mocks/system.js",
-    "ReactDOM": "react-dom"
+    "ReactDOM": "react-dom",
+    '@uppy/core': '<rootDir>/app/static/app/js/tests/mocks/uppy.js',
+    '@uppy/dashboard': '<rootDir>/app/static/app/js/tests/mocks/uppy.js',
+    '@uppy/react': '<rootDir>/app/static/app/js/tests/mocks/uppy.js',
+    '@uppy/xhr-upload': '<rootDir>/app/static/app/js/tests/mocks/uppy.js',
+    '@uppy/drop-target': '<rootDir>/app/static/app/js/tests/mocks/uppy.js',
+    '@uppy/tus': '<rootDir>/app/static/app/js/tests/mocks/uppy.js',
+    '@uppy/google-drive': '<rootDir>/app/static/app/js/tests/mocks/uppy.js',
+    '@uppy/dropbox': '<rootDir>/app/static/app/js/tests/mocks/uppy.js',
+    '@uppy/onedrive': '<rootDir>/app/static/app/js/tests/mocks/uppy.js',
+    '@uppy/webcam': '<rootDir>/app/static/app/js/tests/mocks/uppy.js',
+    '@uppy/url': '<rootDir>/app/static/app/js/tests/mocks/uppy.js',
+    '@uppy/golden-retriever': '<rootDir>/app/static/app/js/tests/mocks/uppy.js'
   },
   setupFiles: ["<rootDir>/app/static/app/js/tests/setup/shims.js",
   				"<rootDir>/app/static/app/js/tests/setup/setupTests.js", 
   				"<rootDir>/app/static/app/js/tests/setup/browserMock.js"],
-  testURL: "http://localhost:8000/"
+  testURL: "http://localhost:8000/",
 };
