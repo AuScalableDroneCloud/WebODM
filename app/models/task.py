@@ -227,13 +227,12 @@ def resize_image(image_path, resize_to, done=None):
         os.rename(resized_image_path, image_path)
 
         logger.info("Resized {} to {}x{}".format(image_path, resized_width, resized_height))
-    except (IOError, ValueError) as e:
-        logger.warning("Cannot resize {}: {}.".format(image_path, str(e)))
-        if done is not None:
-            done()
-        return None
 
-    retval = {'path': image_path, 'resize_ratio': ratio}
+        retval = {'path': image_path, 'resize_ratio': ratio}
+
+    except (Exception) as e:
+        logger.warning("Exception, Cannot resize {}: {}.".format(image_path, str(e)))
+        retval = None
 
     if done is not None:
         done(retval)
