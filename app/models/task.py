@@ -925,7 +925,7 @@ class Task(models.Model):
                     self.running_progress = (info.progress / 100.0) * self.TASK_PROGRESS_LAST_VALUE
 
                     #Only update the db field when progress changes
-                    if len(info.output) > 0 and int(last_progress) > int(self.running_progress):
+                    if self.status != status_codes.RUNNING or len(info.output) > 0 and int(last_progress) > int(self.running_progress):
                         self.console_output += "\n".join(info.output) + '\n'
 
                     if info.last_error != "":
@@ -984,11 +984,15 @@ class Task(models.Model):
                                         os.remove(all_zip_path)
                                     else:
                                         raise NodeServerError(gettext("Invalid zip file"))
-                        else:
-                            # FAILED, CANCELED
-                            self.save()
+
+                        #Save the console output to disk and clear the db field
+                        with open(self.task_path('console_output.txt'), 'w') as f:
+                            f.write(self.console_output)
+                        self.console_output = ""
+                        self.save()
                     else:
-                        # Still waiting...
+                        # Still waiting (running)...
+                        #Do we need to save if no change??
                         self.save()
 
         except (NodeServerError, NodeResponseError) as e:
