@@ -16,7 +16,8 @@ services:
     restart: unless-stopped
     oom_score_adj: -100
   webapp:
-    image: opendronemap/webodm_webapp
+    #image: opendronemap/webodm_webapp
+    image: ghcr.io/auscalabledronecloud/asdc-webodm
     container_name: webapp
     user: webodm
     entrypoint: /bin/bash -c "chmod +x /webodm/*.sh && /bin/bash -c \"/webodm/wait-for-postgres.sh db /webodm/wait-for-it.sh -t 0 broker:6379 -- /webodm/start.sh\""
@@ -39,6 +40,7 @@ services:
       - WO_AUTH0_KEY
       - WO_AUTH0_SECRET
       - WO_ENCRYPTION_KEY
+      - PIPELINES_URL
     restart: unless-stopped
     oom_score_adj: 0
   broker:
@@ -48,7 +50,8 @@ services:
     restart: unless-stopped
     oom_score_adj: -500
   worker:
-    image: opendronemap/webodm_webapp
+    #image: opendronemap/webodm_webapp
+    image: ghcr.io/auscalabledronecloud/asdc-webodm
     container_name: worker
     user: webodm
     entrypoint: /bin/bash -c "/webodm/wait-for-postgres.sh db /webodm/wait-for-it.sh -t 0 broker:6379 -- /webodm/wait-for-it.sh -t 0 webapp:8000 -- /webodm/worker.sh start"
