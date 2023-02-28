@@ -3,7 +3,7 @@ from datetime import timedelta, datetime
 
 import requests
 from django.test import TestCase
-from django.utils import six
+import six
 import time
 from django.utils import timezone
 from os import path
