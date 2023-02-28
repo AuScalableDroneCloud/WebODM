@@ -74,6 +74,9 @@ stop_scheduler(){
 	fi
 }
 
+#ASDC specific ENV
+source asdc_env.sh
+
 if [[ $1 = "start" ]]; then
 	environment_check
 	start

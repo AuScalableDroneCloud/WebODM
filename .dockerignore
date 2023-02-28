@@ -1,1 +1,3 @@
 **/.git
+app/static/app/bundles
+**/node_modules

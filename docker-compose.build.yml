@@ -2,7 +2,9 @@
 # instead of pulling from opendronemap hub
 version: '2.1'
 services:
-  db:
-    build: ./db
+  #db:
+  #  build: ./db
   webapp:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.test

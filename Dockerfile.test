@@ -1,0 +1,16 @@
+FROM ghcr.io/auscalabledronecloud/asdc-webodm
+MAINTAINER Owen Kaluza <owen.kaluza@monash.edu>
+
+ENV TEST_BUILD 1
+
+WORKDIR /webodm
+
+USER webodm
+
+#Copy nodeodm repo
+COPY --chown=webodm:webodm ./nodeodm/external/NodeODM /webodm/nodeodm/external/NodeODM
+
+# Re-run nodeodm setup / cleanup with TEST_BUILD enabled
+RUN /webodm/nodeodm/setup.sh && \
+    /webodm/nodeodm/cleanup.sh
+
