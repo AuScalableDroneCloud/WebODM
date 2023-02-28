@@ -110,6 +110,7 @@ def pull_image(image, task_folder, done=None):
         #Stored as upload URL instead of local path with original filename after #
         fp = image.image.name
         logger.info(f"Pulling image, name: {fp}")
+        filename = None
         if '#' in fp:
             uploadURL, filename = fp.rsplit('#', 1)
 
@@ -126,9 +127,12 @@ def pull_image(image, task_folder, done=None):
         else:
             #No url, just a pathname that should already exist
             uploadURL = ""
+            #If not found, try adding the task folder
+            if not os.path.exists(fp):
+                fp = os.path.join(absolute_task_folder, os.path.basename(fp))
 
-        if not os.path.exists(fp):
-            logger.info(f"- downloading to {fp}")
+        if uploadURL and not os.path.exists(fp):
+            logger.info(f"- downloading {uploadURL} to {fp}")
             try:
                 download_stream = requests.get(uploadURL, stream=True, timeout=60)
                 with open(fp, 'wb') as fd:
@@ -140,7 +144,8 @@ def pull_image(image, task_folder, done=None):
                 logger.warning(f"Error downloading image {filename} from {uploadURL}")
         else:
             #Return the recomputed RELATIVE path in case the original was malformed
-            retval = os.path.join(task_folder, filename)
+            retval = os.path.join(task_folder, os.path.basename(fp))
+            logger.info(f"- file exists, no pull necessary: {retval}")
 
     except Exception  as e:
         logger.warning(f"Failed to pull image for task. We're going to proceed anyway, but you might experience issues: {e}")
