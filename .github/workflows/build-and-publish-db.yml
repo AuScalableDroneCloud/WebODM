@@ -34,7 +34,7 @@ jobs:
       db_changed: ${{ steps.changed-files-specific.outputs.any_changed }}
 
   build:
-    name: Build and push Docker image to GitHub Packages
+    name: Build and push database docker image to GitHub Packages
     runs-on: ubuntu-latest
     needs: [ check_files ]
     if: needs.check_files.outputs.db_changed == 'True'
