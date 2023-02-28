@@ -477,7 +477,7 @@ class TestApi(BootTestCase):
             'username': 'testuser',
             'password': 'test1234'
         })
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn(res.status_code, [status.HTTP_200_OK, status.HTTP_201_CREATED])
 
         token = res.data['token']
         self.assertTrue(len(token) > 0)

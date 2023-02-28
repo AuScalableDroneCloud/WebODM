@@ -376,6 +376,16 @@ if os.environ.get('WO_SSL', 'NO') == 'YES':
 else:
     audience = f'http://{hostname}/api'
 
+from pathlib import Path
+#Generate keys for JWT or use existing
+if not 'JWT_PRIVATE_KEY_PATH' in os.environ:
+    if not os.path.exists('jwt-key'):
+        os.system('openssl genrsa -out jwt-key 4096')
+        os.system('chmod 600 jwt-key')
+        os.system('openssl rsa -in jwt-key -pubout > jwt-key.pub')
+    os.environ['JWT_PRIVATE_KEY_PATH'] = 'jwt-key'
+    os.environ['JWT_PUBLIC_KEY_PATH'] = 'jwt-key.pub'
+
 JWT_AUTH = {
     'JWT_EXPIRATION_DELTA': datetime.timedelta(hours=6),
     'JWT_PAYLOAD_GET_USERNAME_HANDLER':
@@ -384,9 +394,11 @@ JWT_AUTH = {
         'auth0.utils.jwt_decode_token',
     'JWT_ALGORITHM': 'RS256',
     'JWT_AUDIENCE': audience,
-    'JWT_ISSUER': SOCIAL_AUTH_AUTH0_DOMAIN,
+    'JWT_ISSUER': f'https://{hostname}', #SOCIAL_AUTH_AUTH0_DOMAIN,
     #'JWT_AUTH_HEADER_PREFIX': 'JWT',
     'JWT_AUTH_HEADER_PREFIX': 'Bearer',
+    'JWT_PRIVATE_KEY': Path(os.environ.get('JWT_PRIVATE_KEY_PATH', '/dev/null')).read_text(),
+    'JWT_PUBLIC_KEY': Path(os.environ.get('JWT_PUBLIC_KEY_PATH', '/dev/null')).read_text()
 }
 
 # Compressor
