@@ -43,7 +43,7 @@ fi
 if [ "$1" = "--setup-devenv" ] || [ "$2" = "--setup-devenv" ]; then
     echo Setup git modules...
     
-    git submodule update --init
+    git submodule update --init --remote --force
     
     echo Setup npm dependencies...
     npm install --save-dev mini-css-extract-plugin@1.6.2
