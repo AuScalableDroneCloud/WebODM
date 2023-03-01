@@ -57,3 +57,9 @@ jobs:
           ghcr.io/auscalabledronecloud/asdc-webodm:latest
           ${{ steps.meta.outputs.tags }}
 
+    - name: Test
+      run: |
+        docker-compose -f docker-compose.yml -f docker-compose.build.yml build
+        docker-compose -f docker-compose.yml -f docker-compose.build.yml up -d
+        sleep 20
+        docker-compose exec -T webapp /webodm/webodm.sh test
