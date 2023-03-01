@@ -70,6 +70,8 @@ def cleanup_tmp_directory():
     # older than 24 hours
     tmpdir = settings.MEDIA_TMP
     time_limit = 60 * 60 * 24
+    if not os.path.exists(tmpdir):
+        return
 
     for f in os.listdir(tmpdir):
         now = time.time()
