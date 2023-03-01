@@ -30,7 +30,7 @@ fi
 
 # Load default values
 source "${__dirname}/.env"
-source ${__dirname}/.env.secret
+source ${__dirname}/.env.secret || true
 DEFAULT_PORT="$WO_PORT"
 DEFAULT_HOST="$WO_HOST"
 DEFAULT_MEDIA_DIR="$WO_MEDIA_DIR"

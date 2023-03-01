@@ -76,7 +76,7 @@ stop_scheduler(){
 
 #ENV vars and secrets
 source "${__dirname}/.env"
-source ${__dirname}/.env.secret
+source ${__dirname}/.env.secret || true
 
 if [[ $1 = "start" ]]; then
 	environment_check
