@@ -394,11 +394,11 @@ JWT_AUTH = {
         'auth0.utils.jwt_decode_token',
     'JWT_ALGORITHM': 'RS256',
     'JWT_AUDIENCE': audience,
-    'JWT_ISSUER': f'https://{hostname}', #SOCIAL_AUTH_AUTH0_DOMAIN,
+    'JWT_ISSUER': f'https://{hostname}',
     #'JWT_AUTH_HEADER_PREFIX': 'JWT',
     'JWT_AUTH_HEADER_PREFIX': 'Bearer',
     'JWT_PRIVATE_KEY': Path(os.environ.get('JWT_PRIVATE_KEY_PATH', '/dev/null')).read_text(),
-    'JWT_PUBLIC_KEY': Path(os.environ.get('JWT_PUBLIC_KEY_PATH', '/dev/null')).read_text()
+    'JWT_PUBLIC_KEY': Path(os.environ.get('JWT_PUBLIC_KEY_PATH', '/dev/null')).read_text(),
 }
 
 # Compressor

@@ -30,6 +30,7 @@ fi
 
 # Load default values
 source "${__dirname}/.env"
+source ${__dirname}/.env.secret
 DEFAULT_PORT="$WO_PORT"
 DEFAULT_HOST="$WO_HOST"
 DEFAULT_MEDIA_DIR="$WO_MEDIA_DIR"
@@ -37,9 +38,6 @@ DEFAULT_SSL="$WO_SSL"
 DEFAULT_SSL_INSECURE_PORT_REDIRECT="$WO_SSL_INSECURE_PORT_REDIRECT"
 DEFAULT_BROKER="$WO_BROKER"
 DEFAULT_NODES="$WO_DEFAULT_NODES"
-
-#ASDC specific ENV
-source asdc_env.sh
 
 # Parse args for overrides
 POSITIONAL=()
