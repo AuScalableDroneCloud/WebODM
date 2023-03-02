@@ -75,7 +75,7 @@ def wait_for_sync(fn, timeout=30):
     timeout = time.time() + timeout   # Default 30 seconds from now
     while not os.path.exists(fn) and time.time() < timeout:
         logger.info(f"File not yet synched {fn}, sleeping")
-        sleep(1)
+        time.sleep(1)
 
 def validate_task_options(value):
     """
