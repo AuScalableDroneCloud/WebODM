@@ -73,9 +73,12 @@ def wait_for_sync(fn, timeout=30):
     # we may need to wait until the uploaded file appears
     # as worker process will not see it until sync finishes
     timeout = time.time() + timeout   # Default 30 seconds from now
-    while not os.path.exists(fn) and time.time() < timeout:
+    while not os.path.exists(fn):
         logger.info(f"File not yet synched {fn}, sleeping")
         time.sleep(1)
+        if time.time() > timeout:
+            logger.warning(f"File not found! {fn}, timeout waiting for sync")
+            break
 
 def validate_task_options(value):
     """
@@ -632,6 +635,8 @@ class Task(models.Model):
         if self.import_url:
             #If not a .zip, use the original filename
             filename = self.assets_path(self.import_url.rsplit('/', 1)[-1])
+            logger.info("Waiting for file to sync {}".format(filename))
+            wait_for_sync(filename)
             _, file_extension = os.path.splitext(filename)
             if file_extension.lower != ".zip":
                 zip_path = filename
@@ -645,14 +650,8 @@ class Task(models.Model):
                 # check if file placed in shared media folder in /imports directory without traversing
                 try:
                     checked_path_to_file = path_traversal_check(unsafe_path_to_import_file, imports_folder_path)
-                    logger.info("Waiting for file to sync {}".format(checked_path_to_file))
-                    wait_for_sync(checked_path_to_file)
-                    imported_file = zip_path
-                    assert(os.path.exists(checked_path_to_file))
                     if os.path.isfile(checked_path_to_file):
                         copyfile(checked_path_to_file, zip_path)
-                    logger.info("Waiting for file to sync {}".format(zip_path))
-                    wait_for_sync(zip_path)
                 except SuspiciousFileOperation as e:
                     logger.error("Error due importing assets from {} for {} in cause of path checking error".format(self.import_url, self))
                     raise NodeServerError(e)
