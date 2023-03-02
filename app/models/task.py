@@ -645,8 +645,14 @@ class Task(models.Model):
                 # check if file placed in shared media folder in /imports directory without traversing
                 try:
                     checked_path_to_file = path_traversal_check(unsafe_path_to_import_file, imports_folder_path)
+                    logger.info("Waiting for file to sync {}".format(checked_path_to_file))
+                    wait_for_sync(checked_path_to_file)
+                    imported_file = zip_path
+                    assert(os.path.exists(checked_path_to_file))
                     if os.path.isfile(checked_path_to_file):
                         copyfile(checked_path_to_file, zip_path)
+                    logger.info("Waiting for file to sync {}".format(zip_path))
+                    wait_for_sync(zip_path)
                 except SuspiciousFileOperation as e:
                     logger.error("Error due importing assets from {} for {} in cause of path checking error".format(self.import_url, self))
                     raise NodeServerError(e)
@@ -682,7 +688,7 @@ class Task(models.Model):
         self.refresh_from_db()
 
         try:
-            self.extract_assets_and_complete()
+            self.extract_assets_and_complete(zip_path)
         except zipfile.BadZipFile:
             raise NodeServerError(gettext("Invalid zip file"))
         except Exception as e:
@@ -1003,13 +1009,16 @@ class Task(models.Model):
             # Task was interrupted during image resize / upload
             logger.warning("{} interrupted".format(self, str(e)))
 
-    def extract_assets_and_complete(self):
+    def extract_assets_and_complete(self, actual_path=None):
         """
         Extracts assets/all.zip, populates task fields where required and assure COGs
         It will raise a zipfile.BadZipFile exception if the archive is corrupted.
         :return:
         """
+        if actual_path:
+            wait_for_sync(actual_path)
         assets_dir = self.assets_path("")
+
         zip_path = self.assets_path("all.zip")
 
         if os.path.exists(zip_path):
@@ -1030,6 +1039,7 @@ class Task(models.Model):
             known_files = {"orthophoto.tif" : "odm_orthophoto/odm_orthophoto.tif"}
             #If not in known files, add a custom asset
             for f in os.listdir(self.assets_path()):
+                logger.info(f"-- scanning, found {f}")
                 if f in known_files:
                     src = self.assets_path(f)
                     dst = self.assets_path(known_files[f])
