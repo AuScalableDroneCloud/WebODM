@@ -47,6 +47,13 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Test
+      run: |
+        docker-compose -f docker-compose.yml -f docker-compose.build.yml build
+        docker-compose -f docker-compose.yml -f docker-compose.build.yml up -d
+        sleep 20
+        docker-compose exec -T webapp /webodm/webodm.sh test
+
     - name: Push to GitHub Packages
       uses: docker/build-push-action@v2
       with:
@@ -57,9 +64,4 @@ jobs:
           ghcr.io/auscalabledronecloud/asdc-webodm:latest
           ${{ steps.meta.outputs.tags }}
 
-    - name: Test
-      run: |
-        docker-compose -f docker-compose.yml -f docker-compose.build.yml build
-        docker-compose -f docker-compose.yml -f docker-compose.build.yml up -d
-        sleep 20
-        docker-compose exec -T webapp /webodm/webodm.sh test
+
