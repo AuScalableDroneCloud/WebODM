@@ -636,7 +636,7 @@ class Task(models.Model):
             #If not a .zip, use the original filename
             filename = self.assets_path(self.import_url.rsplit('/', 1)[-1])
             logger.info("Waiting for file to sync {}".format(filename))
-            wait_for_sync(filename)
+            wait_for_sync(filename, 120)
             _, file_extension = os.path.splitext(filename)
             if file_extension.lower != ".zip":
                 zip_path = filename
