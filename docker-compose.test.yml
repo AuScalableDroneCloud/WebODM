@@ -1,0 +1,7 @@
+# This configuration uses a tagged test image
+version: '2.1'
+services:
+  webapp:
+    image: ghcr.io/auscalabledronecloud/asdc-webodm:test
+  worker:
+    image: ghcr.io/auscalabledronecloud/asdc-webodm:test
