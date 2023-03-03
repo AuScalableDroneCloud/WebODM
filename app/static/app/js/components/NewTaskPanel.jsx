@@ -71,6 +71,7 @@ class NewTaskPanel extends React.Component {
     }
 
     let tusd_endpoint = location.protocol + '//tusd.' + location.hostname + '/files/';
+    let uppy_endpoint = location.protocol + '//uppy.' + location.hostname;
     if (location.hostname.indexOf('localhost' >= 0)) tusd_endpoint = 'https://tusd.tusdemo.net/files/';
     this.uppy = new Uppy({autoProceed: true,
       /*disableThumbnailGenerator: true,
@@ -99,12 +100,12 @@ class NewTaskPanel extends React.Component {
         }
 
       }})
-      .use(Webcam, {})
-      /*.use(Url, {companionUrl: 'https://companion.uppy.io'})
-      .use(GoogleDrive, {companionUrl: 'https://companion.uppy.io'})
-      .use(Dropbox, {companionUrl: 'https://companion.uppy.io'})
-      .use(OneDrive, {companionUrl: 'https://companion.uppy.io'})*/
       .use(Tus, {endpoint: tusd_endpoint})
+      .use(Webcam, {})
+      .use(Url, {companionUrl: uppy_endpoint})
+      .use(GoogleDrive, {companionUrl: uppy_endpoint})
+      //.use(Dropbox, {companionUrl: 'https://companion.uppy.io'})
+      //.use(OneDrive, {companionUrl: 'https://companion.uppy.io'})
 
     this.save = this.save.bind(this);
     this.handleFormTaskLoaded = this.handleFormTaskLoaded.bind(this);
