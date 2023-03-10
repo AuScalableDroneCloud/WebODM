@@ -668,7 +668,8 @@ class TaskListItem extends React.Component {
           type = 'neutral';
       }
 
-      statusLabel = getStatusLabel(status, type, progress);
+      if (progress < 100 || (progress == 100 && this.state.time > 0 || task.images_count > 0))
+        statusLabel = getStatusLabel(status, type, progress);
     }
 
     const taskActions = [];
