@@ -72,7 +72,10 @@ class NewTaskPanel extends React.Component {
 
     let tusd_endpoint = location.protocol + '//tusd.' + location.hostname + '/files/';
     let uppy_endpoint = location.protocol + '//uppy.' + location.hostname;
-    if (location.hostname.indexOf('localhost' >= 0)) tusd_endpoint = 'https://tusd.tusdemo.net/files/';
+    if (location.hostname.indexOf('localhost' >= 0)) {
+      tusd_endpoint = 'https://tusd.dev.asdc.cloud.edu.au/files/';
+      uppy_endpoint = 'https://uppy.dev.asdc.cloud.edu.au';
+    }
     this.uppy = new Uppy({autoProceed: true,
       /*disableThumbnailGenerator: true,
       showSelectedFiles: false,
