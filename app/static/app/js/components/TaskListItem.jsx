@@ -418,6 +418,7 @@ class TaskListItem extends React.Component {
                       pendingActions.RESTART].indexOf(task.pending_action) !== -1);
     const editable = this.props.hasPermission("change") && [statusCodes.FAILED, statusCodes.COMPLETED, statusCodes.CANCELED].indexOf(task.status) !== -1;
     const actionLoading = this.state.actionLoading;
+    const has_mp4 = task.available_assets.map((function(fn) { return fn.split('.').pop().indexOf('mp4') != -1; })).some((value) => value);
 
     let expanded = "";
     if (this.state.expanded){
@@ -724,10 +725,10 @@ class TaskListItem extends React.Component {
             <i onClick={this.toggleExpanded} className={"clickable far " + (this.state.expanded ? "fa-minus-square" : " fa-plus-square")}></i> <a href="javascript:void(0);" onClick={this.toggleExpanded}>{name}</a>
           </div>
           <div className="col-sm-1 col-xs-5 details">
-            <i className="far fa-image"></i> {task.images_count}
+            {task.images_count > 0 ? <div><i className="far fa-image"></i> {task.images_count}</div> : has_mp4 ? <i className="far fa-file-video"></i> : <i className="fas fa-file-import"></i> }
           </div>
           <div className="col-sm-2 col-xs-5 details">
-            <i className="far fa-clock"></i> {this.hoursMinutesSecs(this.state.time)}
+            {this.state.time > 0 ? <div><i className="far fa-clock"></i> {this.hoursMinutesSecs(this.state.time)}</div>  : "" }
           </div>
           <div className="col-xs-2 text-right visible-xs-block">
             {taskActions.length > 0 ? 
