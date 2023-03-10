@@ -22,6 +22,7 @@ if settings.TESTING:
 
 urlpatterns = [
     url(r'^$', app_views.index, name='index'),
+    url(r'^landing/$', app_views.landing, name='landing'),
     url(r'^welcome/$', app_views.welcome, name='welcome'),
     url(r'^dashboard/$', app_views.dashboard, name='dashboard'),
     url(r'^logout/$', app_views.logout, name='logout'),
