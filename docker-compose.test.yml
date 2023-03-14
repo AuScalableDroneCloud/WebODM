@@ -2,6 +2,6 @@
 version: '2.1'
 services:
   webapp:
-    image: ghcr.io/auscalabledronecloud/asdc-webodm:test
+    image: webodm-test
   worker:
-    image: ghcr.io/auscalabledronecloud/asdc-webodm:test
+    image: webodm-test
