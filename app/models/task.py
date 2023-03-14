@@ -549,8 +549,8 @@ class Task(models.Model):
                     img.pk = None
                     img.task = task
 
-                    prev_name = img.image.name
                     #Just use the source task image path - works as long as source task is not deleted
+                    prev_name = img.image.name
                     #img.image.name = assets_directory_path(task.id, task.project.id,
                     #                                        os.path.basename(img.image.name))
                     

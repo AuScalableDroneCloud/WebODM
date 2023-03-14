@@ -37,7 +37,7 @@ class Thumbnail(TaskNestedView):
         Generate a thumbnail on the fly for a particular task's image
         """
         task = self.get_and_check_task(request, pk)
-        image = ImageUpload.objects.filter(task=task, image=assets_directory_path(task.id, task.project.id, image_filename)).first()
+        image = ImageUpload.objects.filter(task=task, image__endswith=(image_filename)).first()
 
         if image is None:
             logger.error(f"Image not found in database: {image_filename}")
@@ -161,7 +161,7 @@ class ImageDownload(TaskNestedView):
         Download a task's image
         """
         task = self.get_and_check_task(request, pk)
-        image = ImageUpload.objects.filter(task=task, image=assets_directory_path(task.id, task.project.id, image_filename)).first()
+        image = ImageUpload.objects.filter(task=task, image__endswith=(image_filename)).first()
 
         if image is None:
             raise exceptions.NotFound()
