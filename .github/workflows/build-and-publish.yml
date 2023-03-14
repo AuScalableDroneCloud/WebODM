@@ -65,7 +65,7 @@ jobs:
         file: Dockerfile
         load: true
         push: false
-        tags: asdc-webodm:base
+        tags: ghcr.io/auscalabledronecloud/asdc-webodm:base
         cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
     - name: Build and export test image to Docker
@@ -74,7 +74,8 @@ jobs:
         context: .
         file: Dockerfile.test
         push: false
-        tags: asdc-webodm:test
+        pull: false
+        tags: ghcr.io/auscalabledronecloud/asdc-webodm:test
         cache-from: type=local,src=/tmp/.buildx-cache
 
     - name: Test
