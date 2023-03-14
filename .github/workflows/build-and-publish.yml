@@ -56,13 +56,13 @@ jobs:
         context: .
         file: Dockerfile.test
         load: true
-        push: false
-        no-cache: true
-        tags:  ghcr.io/auscalabledronecloud/asdc-webodm:test
+        #push: false
+        #no-cache: true
+        tags:  asdc-webodm:test
 
     - name: Test
       run: |
-        docker inspect ghcr.io/auscalabledronecloud/asdc-webodm:test
+        docker inspect asdc-webodm:test
         docker-compose -f docker-compose.yml -f docker-compose.test.yml up -d
         sleep 20
         docker-compose exec -T webapp /webodm/webodm.sh test
