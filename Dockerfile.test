@@ -1,4 +1,4 @@
-FROM ghcr.io/auscalabledronecloud/asdc-webodm
+FROM asdc-webodm:base
 MAINTAINER Owen Kaluza <owen.kaluza@monash.edu>
 
 ENV TEST_BUILD 1

@@ -58,7 +58,7 @@ jobs:
         load: true
         push: false
         no-cache: true
-        tags: ghcr.io/auscalabledronecloud/asdc-webodm:latest
+        tags: asdc-webodm:base
 
     - name: Build and export test image to Docker
       uses: docker/build-push-action@v4
@@ -67,7 +67,7 @@ jobs:
         file: Dockerfile.test
         load: true
         push: false
-        tags:  asdc-webodm:test
+        tags: asdc-webodm:test
 
     - name: Test
       run: |
