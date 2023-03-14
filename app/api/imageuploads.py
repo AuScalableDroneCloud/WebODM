@@ -5,7 +5,6 @@ import math
 from .tasks import TaskNestedView
 from rest_framework import exceptions
 from app.models import ImageUpload
-from app.models.task import assets_directory_path, full_task_directory_path
 from app.vendor import zipfly
 from PIL import Image, ImageDraw, ImageOps
 from django.http import HttpResponse
@@ -13,6 +12,7 @@ from .tasks import download_file_response, download_file_stream
 from .common import hex2rgb
 import numpy as np
 import json
+from webodm import settings
 import logging
 logger = logging.getLogger('app.logger')
 
@@ -178,11 +178,10 @@ class ImagesDownload(TaskNestedView):
         Download a zip of all task images
         """
         task = self.get_and_check_task(request, pk)
-        zip_dir = full_task_directory_path(task.id, task.project.id)
-        for (dirpath, dirnames, filenames) in os.walk(zip_dir):
-            paths = [{'n': os.path.relpath(os.path.join(zip_dir, f), zip_dir), 'fs': os.path.join(zip_dir, f)} for f in filenames]
-            break #Break to get files in base dir only
-        #print(paths)
+        images = ImageUpload.objects.filter(task=task)
+        #n: (optional) internal archive filename, fs: filesystem path
+        paths = [{'n': os.path.basename(i.path()), 'fs': os.path.join(settings.MEDIA_ROOT, i.path())} for i in images]
+        print(paths)
         if len(paths) == 0:
             raise FileNotFoundError("No files available for download")
         asset_fs = zipfly.ZipStream(paths)
