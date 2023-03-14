@@ -50,14 +50,23 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build and export to Docker
+    - name: Build and export base image to Docker
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: Dockerfile
+        load: true
+        push: false
+        no-cache: true
+        tags: ghcr.io/auscalabledronecloud/asdc-webodm:latest
+
+    - name: Build and export test image to Docker
       uses: docker/build-push-action@v4
       with:
         context: .
         file: Dockerfile.test
         load: true
-        #push: false
-        #no-cache: true
+        push: false
         tags:  asdc-webodm:test
 
     - name: Test
