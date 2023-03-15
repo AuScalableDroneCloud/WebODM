@@ -143,7 +143,8 @@ class TaskList extends React.Component {
     return (
       <div className="task-list">
         {this.state.tasks.filter(t => {
-          return t.name.toLocaleLowerCase().indexOf(this.state.filterText.toLocaleLowerCase()) !== -1 &&
+          let name = t.name ? t.name.toLocaleLowerCase() : '';
+          return name.indexOf(this.state.filterText.toLocaleLowerCase()) !== -1 &&
                   this.arrayContainsAll(t.tags, this.state.filterTags);
         }).map(task => (
           <TaskListItem 
