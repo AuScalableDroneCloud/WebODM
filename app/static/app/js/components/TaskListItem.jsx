@@ -457,7 +457,7 @@ class TaskListItem extends React.Component {
           showOrthophotoMissingWarning = task.available_assets.indexOf("orthophoto.tif") === -1;
         }
 
-        if (task.available_assets.indexOf("textured_model") !== -1 || task.available_assets.indexOf("georeferenced_model") !== -1){
+        if (task.available_assets.filter(asset => asset.indexOf('textured_model') !== -1 || asset.indexOf("georeferenced_model") !== -1).length > 0 ){
           addActionButton(" " + _("View 3D Model"), "btn-primary", "fa fa-cube", () => {
             location.href = `/3d/project/${task.project}/task/${task.id}/`;
           });
