@@ -138,18 +138,27 @@ def pull_image(image, task_folder, done=None):
                 fp = os.path.join(absolute_task_folder, os.path.basename(fp))
 
         if uploadURL and not os.path.exists(fp):
-            logger.info(f"- downloading {uploadURL} to {fp}")
             try:
-                download_stream = requests.get(uploadURL, stream=True, timeout=60)
-                with open(fp, 'wb') as fd:
-                    for chunk in download_stream.iter_content(4096):
-                        fd.write(chunk)
+               if uploadURL[0:4] != "http":
+                    logger.info(f"- copying {uploadURL} to {fp}")
+                    copyfile(uploadURL, fp)
+                else:
+                    logger.info(f"- downloading {uploadURL} to {fp}")
+                    download_stream = requests.get(uploadURL, stream=True, timeout=60)
+                    with open(fp, 'wb') as fd:
+                        for chunk in download_stream.iter_content(4096):
+                            fd.write(chunk)
+
                 #Return the RELATIVE download dest path
                 retval = os.path.join(task_folder, filename)
                 #Remove the link file
                 os.remove(image)
+
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
                 logger.warning(f"Error downloading image {filename} from {uploadURL}")
+            except (Exception) as e:
+                logger.warning(f"Error copying/downloading image {filename} from {uploadURL}")
+
         else:
             #Return the recomputed RELATIVE path in case the original was malformed
             retval = os.path.join(task_folder, os.path.basename(fp))
