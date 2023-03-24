@@ -156,9 +156,9 @@ class TaskViewSet(viewsets.ViewSet):
 
         elif task.console_output:
             output = task.console_output
-        elif os.path.exists(task.task_path('console_output.txt')):
+        elif os.path.exists(task.assets_path('console_output.txt')):
             #Load from disk for completed tasks
-            return download_file_response(request, task.task_path('console_output.txt'), 'attachment', download_filename='console_output.txt')
+            return download_file_response(request, task.assets_path('console_output.txt'), 'attachment', download_filename='console_output.txt')
         #This only exists if the task completed successfully
         elif os.path.exists(task.assets_path('task_output.txt')):
             #Load from disk for completed tasks

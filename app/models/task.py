@@ -960,7 +960,7 @@ class Task(models.Model):
                                         raise NodeServerError(gettext("Invalid zip file"))
 
                         #Save the console output to disk and clear the db field
-                        with open(self.task_path('console_output.txt'), 'w') as f:
+                        with open(self.assets_path('console_output.txt'), 'w') as f:
                             f.write(self.console_output)
                         self.console_output = ""
                         self.save()
@@ -1302,8 +1302,14 @@ class Task(models.Model):
 
     def scan_images(self):
         tp = self.task_path()
+        ap = self.assets_path()
         try:
-            return [e.name for e in os.scandir(tp) if e.is_file()]
+            img_list = [e.name for e in os.scandir(tp) if e.is_file()]
+            #Fix, move to assets
+            if 'console_output.txt' in img_list:
+                shutil.move(f"{tp}/console_output.txt", f"{ap}/console_output.txt")
+                return [e.name for e in os.scandir(tp) if e.is_file()]
+            return img_list
         except:
             return []
 
