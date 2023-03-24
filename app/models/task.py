@@ -139,7 +139,7 @@ def pull_image(image, task_folder, done=None):
 
         if uploadURL and not os.path.exists(fp):
             try:
-               if uploadURL[0:4] != "http":
+                if uploadURL[0:4] != "http":
                     logger.info(f"- copying {uploadURL} to {fp}")
                     copyfile(uploadURL, fp)
                 else:
