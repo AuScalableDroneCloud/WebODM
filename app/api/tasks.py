@@ -258,8 +258,8 @@ class TaskViewSet(viewsets.ViewSet):
         task.create_task_directories()
 
         #For debugging, store the uploaded file list
-        with open(task.asset_path('uploaded.json'), 'w') as out:
-            json.dump(out)
+        with open(task.assets_path('uploaded.json'), 'w') as out:
+            json.dump(files, out)
 
         for image in files:
             #Create .url files containing the uploaded location
