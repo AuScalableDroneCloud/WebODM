@@ -15,7 +15,7 @@ import datetime
 
 import zipfile
 import rasterio
-from shutil import copyfile
+from shutil import copyfile, copyfileobj
 import requests
 from PIL import Image
 from django.contrib.gis.gdal import GDALRaster
