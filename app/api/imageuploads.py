@@ -4,7 +4,6 @@ import math
 
 from .tasks import TaskNestedView
 from rest_framework import exceptions
-from app.models import ImageUpload
 from app.vendor import zipfly
 from PIL import Image, ImageDraw, ImageOps
 from django.http import HttpResponse
@@ -37,13 +36,7 @@ class Thumbnail(TaskNestedView):
         Generate a thumbnail on the fly for a particular task's image
         """
         task = self.get_and_check_task(request, pk)
-        image = ImageUpload.objects.filter(task=task, image__endswith=(image_filename)).first()
-
-        if image is None:
-            logger.error(f"Image not found in database: {image_filename}")
-            raise exceptions.NotFound()
-
-        image_path = image.path()
+        image_path = task.get_image_path(image_filename)
         if not os.path.isfile(image_path):
             logger.error(f"Image not found on disk: {image_path}")
             raise exceptions.NotFound()
@@ -152,8 +145,8 @@ class ImageList(TaskNestedView):
         Download a list of all task images
         """
         task = self.get_and_check_task(request, pk)
-        images = ImageUpload.objects.filter(task=task)
-        return HttpResponse(json.dumps([os.path.basename(i.path()) for i in images]), content_type='application/json')
+        images = task.scan_images()
+        return HttpResponse(json.dumps([os.path.basename(i) for i in images]), content_type='application/json')
 
 class ImageDownload(TaskNestedView):
     def get(self, request, pk=None, project_pk=None, image_filename=""):
@@ -161,12 +154,7 @@ class ImageDownload(TaskNestedView):
         Download a task's image
         """
         task = self.get_and_check_task(request, pk)
-        image = ImageUpload.objects.filter(task=task, image__endswith=(image_filename)).first()
-
-        if image is None:
-            raise exceptions.NotFound()
-
-        image_path = image.path()
+        image_path = task.get_image_path(image_filename)
         if not os.path.isfile(image_path):
             raise exceptions.NotFound()
 
@@ -178,9 +166,10 @@ class ImagesDownload(TaskNestedView):
         Download a zip of all task images
         """
         task = self.get_and_check_task(request, pk)
-        images = ImageUpload.objects.filter(task=task)
+        images = task.scan_images()
+
         #n: (optional) internal archive filename, fs: filesystem path
-        paths = [{'n': os.path.basename(i.path()), 'fs': os.path.join(settings.MEDIA_ROOT, i.path())} for i in images]
+        paths = [{'n': os.path.basename(i), 'fs': os.path.join(settings.MEDIA_ROOT, i)} for i in images]
         print(paths)
         if len(paths) == 0:
             raise FileNotFoundError("No files available for download")

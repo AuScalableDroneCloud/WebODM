@@ -140,8 +140,6 @@ def import_files(task_id, files, user_id, connection_details=None):
                 for chunk in download_stream.iter_content(4096):
                     fd.write(chunk)
         
-        models.ImageUpload.objects.create(task=task, image=path)
-
     logger.info("Will import {} files".format(len(files)))
     task = models.Task.objects.get(pk=task_id)
     task.create_task_directories()
@@ -162,4 +160,5 @@ def import_files(task_id, files, user_id, connection_details=None):
     task.pending_action = None
     task.processing_time = 0
     task.partial = False
+    task.images_count = len(task.scan_images())
     task.save()

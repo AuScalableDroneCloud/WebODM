@@ -479,6 +479,8 @@ class ProjectListItem extends React.Component {
     const numTasks = data.tasks.length;
     const canEdit = this.hasPermission("change");
     const userTags = Tags.userTags(data.tags);
+    let deleteWarning = _("All tasks, images and models associated with this project will be permanently deleted. Are you sure you want to continue?");
+    if (!data.owned) deleteWarning = _("This project was shared with you. It will not be deleted, but simply hidden from your dashboard. Continue?")
 
     return (
       <li className={"project-list-item list-group-item " + (refreshing ? "refreshing" : "")}
@@ -499,6 +501,7 @@ class ProjectListItem extends React.Component {
             projectDescr={data.description}
             projectId={data.id}
             projectTags={data.tags}
+            deleteWarning={deleteWarning}
             saveAction={this.updateProject}
             showPermissions={this.hasPermission("change")}
             deleteAction={this.hasPermission("delete") ? this.handleDelete : undefined}

@@ -22,6 +22,7 @@ from django.contrib.gis.gdal import GDALRaster
 from django.contrib.gis.gdal import OGRGeometry
 from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.postgres import fields
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.exceptions import ValidationError, SuspiciousFileOperation
 from django.db import models
 from django.db import transaction
@@ -98,7 +99,7 @@ def pull_image(image, task_folder, done=None):
     Retrieve uploaded image from staging area to local disk
     """
     #Default to local image stored by pathname
-    retval = image.path()
+    retval = image
     try:
         absolute_task_folder = os.path.join(settings.MEDIA_ROOT, task_folder)
         if not os.path.exists(absolute_task_folder):
@@ -111,11 +112,13 @@ def pull_image(image, task_folder, done=None):
         image_list = []
 
         #Stored as upload URL instead of local path with original filename after #
-        fp = image.image.name
         logger.info(f"Pulling image, name: {fp}")
-        filename = None
-        if '#' in fp:
-            uploadURL, filename = fp.rsplit('#', 1)
+        filename = image
+        fp = image
+        if image[-4:] == '.url':
+            filename = image[:-4]
+            with open(image, 'r') as infile:
+                uploadURL = image.readlines()[0]
 
             # Check if url is invalid and reconstruct
             if uploadURL[0:4] != "http":
@@ -373,10 +376,9 @@ class Task(models.Model):
         Retrieve uploaded images from staging area to local disk
         """
         task_folder = task_directory_path(self.id, self.project_id)
+        images_path = self.task_path()
+        images_set = [os.path.join(images_path, i) for i in self.scan_images()]
 
-        #images_path = self.find_all_files_matching(r'.*\.(jpe?g|tiff?)$')
-        images_set = self.imageupload_set.all()
-        #images_set = [img.image.name for img in self.imageupload_set.all()]
         total_images = len(images_set)
         pulled_images_count = 0
         last_update = 0
@@ -394,16 +396,6 @@ class Task(models.Model):
                 last_update = time.time()
 
         pulled_images = list(map(partial(pull_image, task_folder=task_folder, done=callback), images_set))
-
-        #Replace the staging urls in db with local paths
-        with transaction.atomic(): #Required for db updates
-            for i,img in enumerate(images_set):
-                #Update keys - replace with local path to file
-                prev_name = img.image.name
-                if prev_name != pulled_images[i]:
-                    img.image.name = pulled_images[i]
-                    logger.info("Changing {} to {}".format(prev_name, img.image.name))
-                    img.save()
 
         Task.objects.filter(pk=self.id).update(resize_progress=1.0)
 
@@ -426,15 +418,6 @@ class Task(models.Model):
                 shutil.move(old_task_folder, new_task_folder_parent)
 
                 logger.info("Moved task folder from {} to {}".format(old_task_folder, new_task_folder))
-
-                with transaction.atomic():
-                    for img in self.imageupload_set.all():
-                        prev_name = img.image.name
-                        img.image.name = assets_directory_path(self.id, new_project_id,
-                                                               os.path.basename(img.image.name))
-                        logger.info("Changing {} to {}".format(prev_name, img))
-                        img.save()
-
             else:
                 logger.warning("Project changed for task {}, but either {} doesn't exist, or {} already exists. This doesn't look right, so we will not move any files.".format(self,
                                                                                                              old_task_folder,
@@ -545,19 +528,6 @@ class Task(models.Model):
                 task.refresh_from_db()
 
                 logger.info("Duplicating {} to {}".format(self, task))
-
-                for img in self.imageupload_set.all():
-                    img.pk = None
-                    img.task = task
-
-                    #Just use the source task image path - works as long as source task is not deleted
-                    prev_name = img.image.name
-                    #img.image.name = assets_directory_path(task.id, task.project.id,
-                    #                                        os.path.basename(img.image.name))
-                    
-                    img.save()
-                #Disable copying, no need to copy assets anyway and using existing image paths above
-                """
                 if os.path.isdir(self.task_path()):
                     try:
                         # Try to use hard links first
@@ -570,10 +540,7 @@ class Task(models.Model):
                         copy_tree(self.task_path(), task.task_path(), preserve_mode=0, preserve_times=0, preserve_symlinks=0, update=0)
                 else:
                     logger.warning("Task {} doesn't have folder, will skip copying".format(self))
-                """
-                #Create dirs and update assets as we skip duplicating
-                task.create_task_directories()
-                task.update_available_assets_field(commit=True)
+
             return task
         except Exception as e:
             logger.warning("Cannot duplicate task: {}".format(str(e)))
@@ -773,13 +740,14 @@ class Task(models.Model):
                 if not self.uuid and self.pending_action is None and self.status is None:
                     logger.info("Processing... {}".format(self))
 
-                    images = [image.path() for image in self.imageupload_set.all()]
+                    images_path = self.task_path()
+                    images = [os.path.join(images_path, i) for i in self.scan_images()]
 
                     #Check for urls remaining in image paths
-                    if any("https:" in image for image in images):
+                    if any(image[-4:] == '.url' for image in images):
                         logger.warning("URL FOUND IN IMAGES! - reprocessing from pull")
                         for image in images:
-                            if "https:" in image:
+                            if image[-4:] == '.url':
                                 logger.warning(f" - Problem image entry: {image}")
 
                         self.pending_action = pending_actions.PULL
@@ -1329,3 +1297,34 @@ class Task(models.Model):
                 pass
             else:
                 raise
+
+    def scan_images(self):
+        tp = self.task_path()
+        try:
+            return [e.name for e in os.scandir(tp) if e.is_file()]
+        except:
+            return []
+
+    def get_image_path(self, filename):
+        p = self.task_path(filename)
+        return path_traversal_check(p, self.task_path())
+    
+    def handle_images_upload(self, files):
+        for file in files:
+            name = file.name
+            if name is None:
+                continue
+
+            tp = self.task_path()
+            if not os.path.exists(tp):
+                os.makedirs(tp, exist_ok=True)
+
+            dst_path = self.get_image_path(name)
+
+            with open(dst_path, 'wb+') as fd:
+                if isinstance(file, InMemoryUploadedFile):
+                    for chunk in file.chunks():
+                        fd.write(chunk)
+                else:
+                    with open(file.temporary_file_path(), 'rb') as f:
+                        copyfileobj(f, fd)
