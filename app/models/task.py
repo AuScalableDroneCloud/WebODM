@@ -112,13 +112,13 @@ def pull_image(image, task_folder, done=None):
         image_list = []
 
         #Stored as upload URL instead of local path with original filename after #
-        logger.info(f"Pulling image, name: {fp}")
+        logger.info(f"Pulling image, name: {image}")
         filename = image
         fp = image
         if image[-4:] == '.url':
             filename = image[:-4]
             with open(image, 'r') as infile:
-                uploadURL = image.readlines()[0]
+                uploadURL = infile.readlines()[0]
 
             # Check if url is invalid and reconstruct
             if uploadURL[0:4] != "http":
@@ -146,6 +146,8 @@ def pull_image(image, task_folder, done=None):
                         fd.write(chunk)
                 #Return the RELATIVE download dest path
                 retval = os.path.join(task_folder, filename)
+                #Remove the link file
+                os.remove(image)
             except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
                 logger.warning(f"Error downloading image {filename} from {uploadURL}")
         else:

@@ -255,14 +255,14 @@ class TaskViewSet(viewsets.ViewSet):
         if len(files) == 0:
             raise exceptions.ValidationError(detail=_("No files uploaded"))
 
+        task.create_task_directories()
+
         for image in files:
             #Create .url files containing the uploaded location
             #(original_filename.ext.url)
-            fn = "{}"
-            with open(f"{image['name']}.url", 'w') as out:
+            fn = task.task_path(image['name'] + '.url')
+            with open(fn, 'w') as out:
                 out.write(image["uploadURL"])
-
-        task.create_task_directories()
 
         return Response({'success': True}, status=status.HTTP_200_OK)
 
