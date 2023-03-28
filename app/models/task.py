@@ -15,7 +15,6 @@ import datetime
 
 import zipfile
 import rasterio
-from shutil import copyfile, copyfileobj
 import requests
 from PIL import Image
 from django.contrib.gis.gdal import GDALRaster
@@ -1344,4 +1343,4 @@ class Task(models.Model):
                         fd.write(chunk)
                 else:
                     with open(file.temporary_file_path(), 'rb') as f:
-                        copyfileobj(f, fd)
+                        shutil.copyfileobj(f, fd)
