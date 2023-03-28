@@ -270,22 +270,6 @@ class TaskViewSet(viewsets.ViewSet):
 
         return Response({'success': True}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['get'])
-    def updateassets(self, request, pk=None, project_pk=None):
-        """
-        Updates the available assets list,
-        call if assets have been changed to force an update
-        """
-        get_and_check_project(request, project_pk, ('change_project', ))
-        try:
-            task = self.queryset.get(pk=pk, project=project_pk)
-        except (ObjectDoesNotExist, ValidationError):
-            raise exceptions.NotFound()
-
-        #Update the asset list and save
-        task.update_available_assets_field(commit=True)
-        return Response({'success': True}, status=status.HTTP_200_OK)
-
     @action(detail=True, methods=['post'])
     def duplicate(self, request, pk=None, project_pk=None):
         """
@@ -467,6 +451,10 @@ class TaskAssets(TaskNestedView):
             raise exceptions.NotFound(_("Asset does not exist"))
 
         if unsafe_asset_path == "files.json":
+            #Before returning files.json, re-calculate available assets and extents
+            #Allows user to trigger this action in case assets not refreshed correctly
+            task.populate_extent_fields()
+            task.update_available_assets_field(commit=True)
             #Update the current file list metadata
             try:
                 with open(task.assets_path('files.json'), 'r') as jfile:
@@ -530,6 +518,9 @@ class TaskAssets(TaskNestedView):
         #Update files json
         with open(task.assets_path('files.json'), 'w') as outfile:
             json.dump(metadata, outfile)
+
+        # Populate *_extent fields
+        task.populate_extent_fields()
 
         #Update the asset list and save
         task.update_available_assets_field(commit=True)

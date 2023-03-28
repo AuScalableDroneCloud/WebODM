@@ -1033,6 +1033,23 @@ class Task(models.Model):
                 json.dump(metadata, outfile)
 
         # Populate *_extent fields
+        self.populate_extent_fields()
+
+        self.update_available_assets_field()
+        self.update_epsg_field()
+        self.potree_scene = {}
+        self.running_progress = 1.0
+        self.console_output += gettext("Done!") + "\n"
+        self.status = status_codes.COMPLETED
+        self.save()
+
+        from app.plugins import signals as plugin_signals
+        plugin_signals.task_completed.send_robust(sender=self.__class__, task_id=self.id)
+
+    def populate_extent_fields(self):
+        """
+        Populate the extents for raster assets
+        """
         extent_fields = [
             (os.path.realpath(self.assets_path("odm_orthophoto", "odm_orthophoto.tif")),
              'orthophoto_extent'),
@@ -1066,17 +1083,6 @@ class Task(models.Model):
                 setattr(self, field, GEOSGeometry(extent.wkt, srid=raster.srid))
 
                 logger.info("Populated extent field with {} for {}".format(raster_path, self))
-
-        self.update_available_assets_field()
-        self.update_epsg_field()
-        self.potree_scene = {}
-        self.running_progress = 1.0
-        self.console_output += gettext("Done!") + "\n"
-        self.status = status_codes.COMPLETED
-        self.save()
-
-        from app.plugins import signals as plugin_signals
-        plugin_signals.task_completed.send_robust(sender=self.__class__, task_id=self.id)
 
     def get_tile_path(self, tile_type, z, x, y):
         return self.assets_path("{}_tiles".format(tile_type), z, x, "{}.png".format(y))
