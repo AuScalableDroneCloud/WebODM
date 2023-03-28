@@ -140,7 +140,7 @@ def pull_image(image, task_folder, done=None):
             try:
                 if uploadURL[0:4] != "http":
                     logger.info(f"- copying {uploadURL} to {fp}")
-                    copyfile(uploadURL, fp)
+                    shutil.copyfile(uploadURL, fp)
                 else:
                     logger.info(f"- downloading {uploadURL} to {fp}")
                     download_stream = requests.get(uploadURL, stream=True, timeout=60)
@@ -627,7 +627,7 @@ class Task(models.Model):
                 try:
                     checked_path_to_file = path_traversal_check(unsafe_path_to_import_file, imports_folder_path)
                     if os.path.isfile(checked_path_to_file):
-                        copyfile(checked_path_to_file, zip_path)
+                        shutil.copyfile(checked_path_to_file, zip_path)
                 except SuspiciousFileOperation as e:
                     logger.error("Error due importing assets from {} for {} in cause of path checking error".format(self.import_url, self))
                     raise NodeServerError(e)
