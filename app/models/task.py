@@ -161,10 +161,15 @@ def pull_image(image, task_folder, done=None):
         else:
             #Return the recomputed RELATIVE path in case the original was malformed
             retval = os.path.join(task_folder, os.path.basename(fp))
+            #Remove the link file
+            if image[-4:] == '.url':
+                os.remove(image)
             logger.info(f"- file exists, no pull necessary: {retval}")
 
     except Exception  as e:
         logger.warning(f"Failed to pull image for task. We're going to proceed anyway, but you might experience issues: {e}")
+        if image[-4:] == '.url':
+            os.rename(image, image + ".failed")
 
     if done is not None:
         done(retval)
