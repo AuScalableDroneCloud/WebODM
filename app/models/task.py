@@ -407,7 +407,8 @@ class Task(models.Model):
             if time.time() - last_update >= 2:
                 # Update progress (just use the resize progress for now so we don't need to add a new model field)
                 Task.objects.filter(pk=self.id).update(resize_progress=(float(pulled_images_count) / float(total_images)))
-                self.check_if_canceled()
+                #Calling this is causing issues "RecursionError: maximum recursion depth exceeded while calling a Python object"
+                #self.check_if_canceled()
                 last_update = time.time()
 
         pulled_images = list(map(partial(pull_image, task_folder=task_folder, done=callback), images_set))
