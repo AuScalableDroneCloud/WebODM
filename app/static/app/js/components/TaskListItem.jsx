@@ -12,6 +12,7 @@ import TaskPluginActionButtons from './TaskPluginActionButtons';
 import MoveTaskDialog from './MoveTaskDialog';
 import PipelineSteps from '../classes/PipelineSteps';
 import Css from '../classes/Css';
+import Tags from '../classes/Tags';
 import Trans from './Trans';
 import { _, interpolate } from '../classes/gettext';
 
@@ -23,7 +24,9 @@ class TaskListItem extends React.Component {
       onDelete: PropTypes.func,
       onMove: PropTypes.func,
       onDuplicate: PropTypes.func,
-      hasPermission: PropTypes.func
+      hasPermission: PropTypes.func,
+      onEdited: PropTypes.func,
+      onTagClicked: PropTypes.func
   }
 
   constructor(props){
@@ -278,6 +281,7 @@ class TaskListItem extends React.Component {
 
   handleEditTaskSave(task){
     this.setState({task, editing: false});
+    if (this.props.onEdited) this.props.onEdited(task);
     this.setAutoRefresh();
   }
 
@@ -401,6 +405,12 @@ class TaskListItem extends React.Component {
     }else return false;
   }
 
+  handleTagClick = t => {
+    return () => {
+      if (this.props.onTagClicked) this.props.onTagClicked(t);
+    }
+  }
+
   render() {
     const task = this.state.task;
     const name = task.name !== null ? task.name : interpolate(_("Task #%(number)s"), { number: task.id });
@@ -418,6 +428,7 @@ class TaskListItem extends React.Component {
                       pendingActions.RESTART].indexOf(task.pending_action) !== -1);
     const editable = this.props.hasPermission("change") && [statusCodes.FAILED, statusCodes.COMPLETED, statusCodes.CANCELED].indexOf(task.status) !== -1;
     const actionLoading = this.state.actionLoading;
+    const has_mp4 = task.available_assets.map((function(fn) { return fn.split('.').pop().indexOf('mp4') != -1; })).some((value) => value);
 
     let expanded = "";
     if (this.state.expanded){
@@ -446,9 +457,11 @@ class TaskListItem extends React.Component {
           showOrthophotoMissingWarning = task.available_assets.indexOf("orthophoto.tif") === -1;
         }
 
-        addActionButton(" " + _("View 3D Model"), "btn-primary", "fa fa-cube", () => {
-          location.href = `/3d/project/${task.project}/task/${task.id}/`;
-        });
+        if (task.available_assets.filter(asset => asset.indexOf('textured_model') !== -1 || asset.indexOf("georeferenced_model") !== -1).length > 0 ){
+          addActionButton(" " + _("View 3D Model"), "btn-primary", "fa fa-cube", () => {
+            location.href = `/3d/project/${task.project}/task/${task.id}/`;
+          });
+        }
       }
 
       if (editable || (!task.processing_node)){
@@ -596,7 +609,7 @@ class TaskListItem extends React.Component {
 
               {showExitedWithCodeOneHints ?
               <div className="task-warning"><i className="fa fa-info-circle"></i> <div className="inline">
-                  <Trans params={{link1: `<a href="https://www.dronedb.app/" target="_blank">DroneDB</a>`, link2: `<a href="https://drive.google.com/drive/u/0/" target="_blank">Google Drive</a>`, open_a_topic: `<a href="http://community.opendronemap.org/c/webodm" target="_blank">${_("open a topic")}</a>`, }}>{_("\"Process exited with code 1\" means that part of the processing failed. Sometimes it's a problem with the dataset, sometimes it can be solved by tweaking the Task Options and sometimes it might be a bug! If you need help, upload your images somewhere like %(link1)s or %(link2)s and %(open_a_topic)s on our community forum, making sure to include a copy of your task's output. Our awesome contributors will try to help you!")}</Trans> <i className="far fa-smile"></i>
+                  <Trans params={{link: `<a href="https://docs.opendronemap.org" target="_blank">docs.opendronemap.org</a>` }}>{_("\"Process exited with code 1\" means that part of the processing failed. Sometimes it's a problem with the dataset, sometimes it can be solved by tweaking the Task Options. Check the documentation at %(link)")}</Trans>
                 </div>
               </div>
               : ""}
@@ -665,7 +678,8 @@ class TaskListItem extends React.Component {
           type = 'neutral';
       }
 
-      statusLabel = getStatusLabel(status, type, progress);
+      if (progress < 100 || (progress == 100 && this.state.time > 0 || task.images_count > 0))
+        statusLabel = getStatusLabel(status, type, progress);
     }
 
     const taskActions = [];
@@ -686,10 +700,9 @@ class TaskListItem extends React.Component {
     }
 
     if (editable){
-        taskActions.push(
-            <li key="move"><a href="javascript:void(0)" onClick={this.handleMoveTask}><i className="fa fa-arrows-alt"></i>{_("Move")}</a></li>,
-            <li key="duplicate"><a href="javascript:void(0)" onClick={this.handleDuplicateTask}><i className="fa fa-copy"></i>{_("Duplicate")}</a></li>
-        );
+        taskActions.push(<li key="move"><a href="javascript:void(0)" onClick={this.handleMoveTask}><i className="fa fa-arrows-alt"></i>{_("Move")}</a></li>);
+        if (task.images_count > 0)
+          taskActions.push(<li key="duplicate"><a href="javascript:void(0)" onClick={this.handleDuplicateTask}><i className="fa fa-copy"></i>{_("Duplicate")}</a></li>);
     }
 
 
@@ -706,6 +719,7 @@ class TaskListItem extends React.Component {
 
     let taskActionsIcon = "fa-ellipsis-h";
     if (actionLoading) taskActionsIcon = "fa-circle-notch fa-spin fa-fw";
+    const userTags = Tags.userTags(task.tags);
 
     return (
       <div className="task-list-item">
@@ -719,13 +733,16 @@ class TaskListItem extends React.Component {
         : ""}
         <div className="row">
           <div className="col-sm-5 col-xs-12 name">
-            <i onClick={this.toggleExpanded} className={"clickable far " + (this.state.expanded ? "fa-minus-square" : " fa-plus-square")}></i> <a href="javascript:void(0);" onClick={this.toggleExpanded}>{name}</a>
+            <i onClick={this.toggleExpanded} className={"clickable far " + (this.state.expanded ? "fa-minus-square" : " fa-plus-square")}></i> <a href="javascript:void(0);" onClick={this.toggleExpanded} className="name-link">{name}</a>
+            {userTags.length > 0 ? 
+              userTags.map((t, i) => <div key={i} className="tag-badge small-badge" onClick={this.handleTagClick(t)}>{t}</div>)
+              : ""}
           </div>
           <div className="col-sm-1 col-xs-5 details">
-            <i className="far fa-image"></i> {task.images_count}
+            {task.images_count > 0 ? <div><i className="far fa-image"></i> {task.images_count}</div> : has_mp4 ? <i className="far fa-file-video"></i> : <i className="fas fa-file-import"></i> }
           </div>
           <div className="col-sm-2 col-xs-5 details">
-            <i className="far fa-clock"></i> {this.hoursMinutesSecs(this.state.time)}
+            {this.state.time > 0 ? <div><i className="far fa-clock"></i> {this.hoursMinutesSecs(this.state.time)}</div>  : "" }
           </div>
           <div className="col-xs-2 text-right visible-xs-block">
             {taskActions.length > 0 ? 

@@ -26,6 +26,7 @@ from nodeodm import status_codes
 from nodeodm.models import ProcessingNode
 from worker import tasks as worker_tasks
 from .common import get_and_check_project, get_asset_download_filename
+from .tags import TagsField
 from app.security import path_traversal_check
 from django.utils.translation import gettext_lazy as _
 
@@ -48,6 +49,7 @@ class TaskSerializer(serializers.ModelSerializer):
     processing_node_name = serializers.SerializerMethodField()
     can_rerun_from = serializers.SerializerMethodField()
     statistics = serializers.SerializerMethodField()
+    tags = TagsField(required=False)
 
     def get_processing_node_name(self, obj):
         if obj.processing_node is not None:
@@ -149,9 +151,31 @@ class TaskViewSet(viewsets.ViewSet):
         except (ObjectDoesNotExist, ValidationError):
             raise exceptions.NotFound()
 
+        output = ""
+        if task.processing_node and task.uuid and task.status == status_codes.RUNNING:
+            # Update task info from processing node
+            info = task.processing_node.get_task_info(task.uuid, 0)
+
+            if len(info.output) > 0:
+                output = "\n".join(info.output) + '\n'
+
+        elif task.console_output:
+            output = task.console_output
+        elif os.path.exists(task.assets_path('console_output.txt')):
+            #Load from disk for completed tasks
+            return download_file_response(request, task.assets_path('console_output.txt'), 'attachment', download_filename='console_output.txt')
+        #This only exists if the task completed successfully
+        elif os.path.exists(task.assets_path('task_output.txt')):
+            #Load from disk for completed tasks
+            return download_file_response(request, task.assets_path('task_output.txt'), 'attachment', download_filename='task_output.txt')
+
         line_num = max(0, int(request.query_params.get('line', 0)))
-        output = task.console_output or ""
-        return Response('\n'.join(output.rstrip().split('\n')[line_num:]))
+        data = '\n'.join(output.rstrip().split('\n')[line_num:])
+
+        if request.query_params.get('text', False):
+            return HttpResponse(data, content_type='text/plain; charset=UTF-8')
+        else:
+            return Response(data)
 
     def list(self, request, project_pk=None):
         get_and_check_project(request, project_pk)
@@ -184,7 +208,7 @@ class TaskViewSet(viewsets.ViewSet):
             raise exceptions.NotFound()
 
         task.partial = False
-        task.images_count = models.ImageUpload.objects.filter(task=task).count()
+        task.images_count = len(task.scan_images())
 
         if task.images_count < 2:
             raise exceptions.ValidationError(detail=_("You need to upload at least 2 images before commit"))
@@ -211,11 +235,8 @@ class TaskViewSet(viewsets.ViewSet):
         if len(files) == 0:
             raise exceptions.ValidationError(detail=_("No files uploaded"))
 
-        with transaction.atomic():
-            for image in files:
-                models.ImageUpload.objects.create(task=task, image=image)
-
-        task.images_count = models.ImageUpload.objects.filter(task=task).count()
+        task.handle_images_upload(files)
+        task.images_count = len(task.scan_images())
         # Update other parameters such as processing node, task name, etc.
         serializer = TaskSerializer(task, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -239,31 +260,19 @@ class TaskViewSet(viewsets.ViewSet):
         if len(files) == 0:
             raise exceptions.ValidationError(detail=_("No files uploaded"))
 
-        with transaction.atomic():
-            for image in files:
-                #Append the original filename to url
-                imageurl = image["uploadURL"] + '#' + image["name"]
-                logger.info("uploadURL: " + imageurl)
-                models.ImageUpload.objects.create(task=task, image=imageurl)
-
         task.create_task_directories()
 
-        return Response({'success': True}, status=status.HTTP_200_OK)
+        #For debugging, store the uploaded file list
+        with open(task.assets_path('uploaded.json'), 'w') as out:
+            json.dump(files, out)
 
-    @action(detail=True, methods=['get'])
-    def updateassets(self, request, pk=None, project_pk=None):
-        """
-        Updates the available assets list,
-        call if assets have been changed to force an update
-        """
-        get_and_check_project(request, project_pk, ('change_project', ))
-        try:
-            task = self.queryset.get(pk=pk, project=project_pk)
-        except (ObjectDoesNotExist, ValidationError):
-            raise exceptions.NotFound()
+        for image in files:
+            #Create .url files containing the uploaded location
+            #(original_filename.ext.url)
+            fn = task.task_path(image['name'] + '.url')
+            with open(fn, 'w') as out:
+                out.write(image["uploadURL"])
 
-        #Update the asset list and save
-        task.update_available_assets_field(commit=True)
         return Response({'success': True}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'])
@@ -304,9 +313,8 @@ class TaskViewSet(viewsets.ViewSet):
                 task = models.Task.objects.create(project=project,
                                                   pending_action=pending_actions.PULL)
 
-                for image in files:
-                    models.ImageUpload.objects.create(task=task, image=image)
-                task.images_count = len(files)
+                task.handle_images_upload(files)
+                task.images_count = len(task.scan_images())
 
                 # Update other parameters such as processing node, task name, etc.
                 serializer = TaskSerializer(task, data=request.data, partial=True)
@@ -452,6 +460,10 @@ class TaskAssets(TaskNestedView):
             raise exceptions.NotFound(_("Asset does not exist"))
 
         if unsafe_asset_path == "files.json":
+            #Before returning files.json, re-calculate available assets and extents
+            #Allows user to trigger this action in case assets not refreshed correctly
+            task.populate_extent_fields()
+            task.update_available_assets_field(commit=True)
             #Update the current file list metadata
             try:
                 with open(task.assets_path('files.json'), 'r') as jfile:
@@ -462,6 +474,7 @@ class TaskAssets(TaskNestedView):
             metadata["files"] = [os.path.relpath(os.path.join(dp, f), task.task_path()) for dp, dn, filenames in os.walk(task.task_path()) for f in filenames]
 
             #Update files json
+            os.makedirs(task.assets_path(), exist_ok=True)
             with open(task.assets_path('files.json'), 'w') as outfile:
                 json.dump(metadata, outfile)
 
@@ -514,6 +527,9 @@ class TaskAssets(TaskNestedView):
         #Update files json
         with open(task.assets_path('files.json'), 'w') as outfile:
             json.dump(metadata, outfile)
+
+        # Populate *_extent fields
+        task.populate_extent_fields()
 
         #Update the asset list and save
         task.update_available_assets_field(commit=True)

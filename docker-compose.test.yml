@@ -1,0 +1,7 @@
+# This configuration uses a tagged test image
+version: '2.1'
+services:
+  webapp:
+    image: webodm-test
+  worker:
+    image: webodm-test

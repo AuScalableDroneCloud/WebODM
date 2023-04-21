@@ -24,19 +24,24 @@ class TestApp(BootTestCase):
         # Add user to test Group
         User.objects.get(pk=1).groups.add(my_group)
 
-
     def test_user_login(self):
         c = Client()
         # User points the browser to the landing page
-        res = c.post('/', follow=True)
-
-        # the user is not logged in
-        self.assertFalse(res.context['user'].is_authenticated)
         # and is redirected to the login page
-        self.assertRedirects(res, '/login/')
-
-        # The login page is being rendered by the correct template
-        self.assertTemplateUsed(res, 'registration/login.html')
+        if not hasattr(settings, 'SOCIAL_AUTH_AUTH0_DOMAIN'):
+            #Test with follow
+            res = c.get('/', follow=True)
+            # the user is not logged in
+            self.assertFalse(res.context['user'].is_authenticated)
+            self.assertRedirects(res, '/login/')
+            # The login page is being rendered by the correct template
+            self.assertTemplateUsed(res, 'registration/login.html')
+        else:
+            #Test without follow
+            res = c.get('/')
+            self.assertTrue(res.status_code == status.HTTP_302_FOUND)
+            self.assertEqual(res.url, '/landing/')
+            #self.assertTemplateUsed(res, 'landing.html')
 
         # asks the user to login using a set of valid credentials
         res = c.post('/login/', data=self.credentials, follow=True)
@@ -50,19 +55,26 @@ class TestApp(BootTestCase):
     def test_views(self):
         c = Client()
 
-        # Connecting to dashboard without auth redirects to /
-        res = c.get('/dashboard/', follow=True)
-        self.assertFalse(res.context['user'].is_authenticated)
-        self.assertRedirects(res, '/login/?next=/dashboard/')
+        #Test login redirection for user/pass and social auth modes
+        def _test_redirect(url):
+            if hasattr(settings, 'SOCIAL_AUTH_AUTH0_DOMAIN'):
+                #Test without follow
+                res = c.get(url)
+                self.assertTrue(res.status_code == status.HTTP_302_FOUND)
+                self.assertEqual(res.url, '/login/auth0?next=' + url)
+            else:
+                #Test with follow
+                res = c.get(url, follow=True)
+                # the user is not logged in
+                self.assertFalse(res.context['user'].is_authenticated)
+                self.assertRedirects(res, '/login/?next=' + url)
+            return res
 
-        res = c.get('/processingnode/1/', follow=True)
-        self.assertRedirects(res, '/login/?next=/processingnode/1/')
-
-        res = c.get('/map/project/1/', follow=True)
-        self.assertRedirects(res, '/login/?next=/map/project/1/')
-
-        res = c.get('/3d/project/1/task/1/', follow=True)
-        self.assertRedirects(res, '/login/?next=/3d/project/1/task/1/')
+        # Connecting to dashboard without auth redirects to /dashboard
+        res = _test_redirect('/dashboard/')
+        res = _test_redirect('/processingnode/1/')
+        res = _test_redirect('/map/project/1/')
+        res = _test_redirect('/3d/project/1/task/1/')
 
         # Login
         c.post('/login/', data=self.credentials, follow=True)

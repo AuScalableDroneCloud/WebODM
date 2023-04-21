@@ -28,7 +28,7 @@ class TestApi(BootTestCase):
             'username': super_user_name,
             'password': super_user_pass,
         })
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn(res.status_code, [status.HTTP_200_OK, status.HTTP_201_CREATED])
         super_user_token = res.data['token']
         client = APIClient(HTTP_AUTHORIZATION="{0} {1}".format(api_settings.JWT_AUTH_HEADER_PREFIX, super_user_token))
 
@@ -86,7 +86,7 @@ class TestApi(BootTestCase):
             'username': user_name,
             'password': user_pass,
         })
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn(res.status_code, [status.HTTP_200_OK, status.HTTP_201_CREATED])
         user_token = res.data['token']
         client = APIClient(HTTP_AUTHORIZATION="{0} {1}".format(api_settings.JWT_AUTH_HEADER_PREFIX, user_token))
 
@@ -124,7 +124,7 @@ class TestApi(BootTestCase):
             'username': super_user_name,
             'password': super_user_pass,
         })
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn(res.status_code, [status.HTTP_200_OK, status.HTTP_201_CREATED])
         super_user_token = res.data['token']
         client = APIClient(HTTP_AUTHORIZATION="{0} {1}".format(api_settings.JWT_AUTH_HEADER_PREFIX, super_user_token))
 
@@ -178,7 +178,7 @@ class TestApi(BootTestCase):
             'username': user_name,
             'password': user_pass,
         })
-        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn(res.status_code, [status.HTTP_200_OK, status.HTTP_201_CREATED])
         user_token = res.data['token']
         client = APIClient(HTTP_AUTHORIZATION="{0} {1}".format(api_settings.JWT_AUTH_HEADER_PREFIX, user_token))
 

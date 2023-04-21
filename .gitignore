@@ -80,6 +80,7 @@ celerybeat.pid
 
 # dotenv
 .env
+.env.secret
 
 # virtualenv
 venv/
@@ -100,6 +101,10 @@ package-lock.json
 .initialized
 .vscode/
 .DS_Store
+
+app/static/app/bundles/
+src/rio-tiler/
+celerybeat-schedule.db
 
 # Debian builds
 dpkg/build

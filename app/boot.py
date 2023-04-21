@@ -37,7 +37,7 @@ def boot():
         logger.warning("Debug mode is ON (for development this is OK)")
 
     # Silence django's "Warning: Session data corrupted" messages
-    session_logger = logging.getLogger("django.security.SuspiciousSession")
+    session_logger = logging.getLogger("django.SuspiciousOperation.SuspiciousSession")
     session_logger.disabled = True
 
     # Make sure our app/media/tmp folder exists
@@ -156,12 +156,6 @@ def add_default_presets():
                                                               {'name': 'pc-quality', 'value': 'high'},
                                                               {'name': 'dem-resolution', 'value': "2.0"},
                                                               {'name': 'orthophoto-resolution', 'value': "2.0"}]})
-        Preset.objects.update_or_create(name='Ultra Quality', system=True,
-                                        defaults={'options': [{'name': 'auto-boundary', 'value': True},
-                                                              {'name': 'dsm', 'value': True},
-                                                              {'name': 'pc-quality', 'value': 'ultra'},
-                                                              {'name': 'dem-resolution', 'value': "2.0"},
-                                                              {'name': 'orthophoto-resolution', 'value': "1.0"}]}) 
         Preset.objects.update_or_create(name='Default', system=True,
                                         defaults={'options': [{'name': 'auto-boundary', 'value': True},
                                                               {'name': 'dsm', 'value': True}]})

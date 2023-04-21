@@ -71,13 +71,17 @@ class NewTaskPanel extends React.Component {
     }
 
     let tusd_endpoint = location.protocol + '//tusd.' + location.hostname + '/files/';
-    if (location.hostname.indexOf('localhost' >= 0)) tusd_endpoint = 'https://tusd.tusdemo.net/files/';
+    let uppy_endpoint = location.protocol + '//uppy.' + location.hostname;
+    if (location.hostname.indexOf('localhost') !== -1) {
+      tusd_endpoint = 'https://tusd.dev.asdc.cloud.edu.au/files/';
+      uppy_endpoint = 'https://uppy.dev.asdc.cloud.edu.au';
+    }
     this.uppy = new Uppy({autoProceed: true,
       /*disableThumbnailGenerator: true,
       showSelectedFiles: false,
       closeAfterFinish: true,
       showRemoveButtonAfterComplete: true,*/
-      restrictions: {allowedFileTypes : ['image/*', '.txt', '.zip']},
+      restrictions: {allowedFileTypes : ['image/*', 'video/*', '.txt', '.zip', '.las', '.laz', '.srt']},
       onBeforeFileAdded: (currentFile, files) => {
         //Filter dotfiles
         if (currentFile.name[0] === '.') {
@@ -99,12 +103,12 @@ class NewTaskPanel extends React.Component {
         }
 
       }})
-      .use(Webcam, {})
-      /*.use(Url, {companionUrl: 'https://companion.uppy.io'})
-      .use(GoogleDrive, {companionUrl: 'https://companion.uppy.io'})
-      .use(Dropbox, {companionUrl: 'https://companion.uppy.io'})
-      .use(OneDrive, {companionUrl: 'https://companion.uppy.io'})*/
       .use(Tus, {endpoint: tusd_endpoint})
+      .use(Webcam, {})
+      .use(Url, {companionUrl: uppy_endpoint})
+      .use(GoogleDrive, {companionUrl: uppy_endpoint})
+      //.use(Dropbox, {companionUrl: 'https://companion.uppy.io'})
+      //.use(OneDrive, {companionUrl: 'https://companion.uppy.io'})
 
     this.save = this.save.bind(this);
     this.handleFormTaskLoaded = this.handleFormTaskLoaded.bind(this);

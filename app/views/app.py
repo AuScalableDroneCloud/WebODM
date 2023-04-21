@@ -30,7 +30,7 @@ def index(request):
         login(request, User.objects.get(username="admin"), 'django.contrib.auth.backends.ModelBackend')
 
     return redirect(settings.LOGIN_REDIRECT_URL if request.user.is_authenticated
-                    else settings.LOGIN_URL)
+                    else 'landing')
 
 def logout(request):
     log_out(request)
@@ -162,6 +162,15 @@ def welcome(request):
                   {
                       'title': _('Welcome'),
                       'firstuserform': fuf
+                  })
+
+def landing(request):
+    if request.user.is_authenticated:
+        return redirect('index')
+
+    return render(request, 'app/landing.html',
+                  {
+                      'title': _('Welcome'),
                   })
 
 

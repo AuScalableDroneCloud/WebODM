@@ -14,7 +14,7 @@ WORKDIR /webodm
 RUN printf "deb http://old-releases.ubuntu.com/ubuntu/ hirsute main restricted\ndeb http://old-releases.ubuntu.com/ubuntu/ hirsute-updates main restricted\ndeb http://old-releases.ubuntu.com/ubuntu/ hirsute universe\ndeb http://old-releases.ubuntu.com/ubuntu/ hirsute-updates universe\ndeb http://old-releases.ubuntu.com/ubuntu/ hirsute multiverse\ndeb http://old-releases.ubuntu.com/ubuntu/ hirsute-updates multiverse\ndeb http://old-releases.ubuntu.com/ubuntu/ hirsute-backports main restricted universe multiverse" > /etc/apt/sources.list
 
 # Install Node.js
-RUN apt-get -qq update && apt-get -qq install -y --no-install-recommends wget curl apt-utils && \
+RUN apt-get -qq update && apt-get -qq install -y --no-install-recommends wget curl apt-utils unzip && \
     wget --no-check-certificate https://deb.nodesource.com/setup_14.x -O /tmp/node.sh && bash /tmp/node.sh && \
     apt-get -qq update && apt-get -qq install -y nodejs && \
     # Install Python3, GDAL, PDAL, nginx, letsencrypt, psql

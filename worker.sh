@@ -52,7 +52,7 @@ start(){
 	action=$1
 
 	echo "Starting worker using broker at $WO_BROKER"
-	celery -A worker worker --autoscale $(grep -c '^processor' /proc/cpuinfo),2 --max-tasks-per-child 1000 --loglevel=warn > /dev/null
+	celery -A worker worker --autoscale $(grep -c '^processor' /proc/cpuinfo),2 --max-tasks-per-child 1000 --loglevel=warning > /dev/null
 }
 
 start_scheduler(){
@@ -74,12 +74,9 @@ stop_scheduler(){
 	fi
 }
 
-#Set AWS S3 params
-export AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
-export AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
-export AWS_REGION="$AWS_REGION"
-export AWS_ENDPOINT="$AWS_ENDPOINT"
-export AWS_IMAGE_BUCKET="$AWS_IMAGE_BUCKET"
+#ENV vars and secrets
+source "${__dirname}/.env"
+source ${__dirname}/.env.secret || true
 
 if [[ $1 = "start" ]]; then
 	environment_check

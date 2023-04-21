@@ -44,6 +44,11 @@ algos = {
         'expr': '(G - R) / (G + R - B)',
         'help': _('Visual Atmospheric Resistance Index shows the areas of vegetation.'),
         'range': (-1, 1)
+    },    
+    'MPRI': {
+        'expr': '(G - R) / (G + R)',
+        'help': _('Modified Photochemical Reflectance Index'),
+        'range': (-1, 1)
     },
     'EXG': {
         'expr': '(2 * G) - (R + B)',
@@ -103,6 +108,11 @@ algos = {
     'EVI': {
         'expr': '2.5 * (N - R) / (N + 6*R - 7.5*B + 1)',
         'help': _('Enhanced Vegetation Index is useful in areas where NDVI might saturate, by using blue wavelengths to correct soil signals.'),
+        'range': (-1, 1)
+    },
+    'ARVI': {
+        'expr': '(N - (2 * R) + B) / (N + (2 * R) + B)',
+        'help': _('Atmospherically Resistant Vegetation Index. Useful when working with imagery for regions with high atmospheric aerosol content.'),
         'range': (-1, 1)
     },
     'Thermal C': {

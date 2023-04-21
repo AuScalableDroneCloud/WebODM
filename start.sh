@@ -1,4 +1,8 @@
 #!/bin/bash
+#Fix for FileNotFoundError: [Errno 2] No such file or directory: '/usr/bin/pip3.9'
+#https://github.com/pypa/pip/issues/11309
+pip config set global.disable-pip-version-check true
+
 __dirname=$(cd $(dirname "$0"); pwd -P)
 cd ${__dirname}
 
@@ -39,7 +43,7 @@ fi
 if [ "$1" = "--setup-devenv" ] || [ "$2" = "--setup-devenv" ]; then
     echo Setup git modules...
     
-    git submodule update --init
+    git submodule update --init --remote --force
     
     echo Setup npm dependencies...
     npm install --save-dev mini-css-extract-plugin@1.6.2
@@ -117,8 +121,7 @@ congrats(){
 
     echo -e "\033[93m"
     echo Open a web browser and navigate to $proto://$WO_HOST:$WO_PORT
-    echo -e "\033[39m"
-    echo -e "\033[91mNOTE:\033[39m Windows users using docker should replace localhost with the IP of their docker machine's IP. To find what that is, run: docker-machine ip") &
+    echo -e "\033[39m") &
 }
 
 if [ "$1" = "--setup-devenv" ] || [ "$2" = "--setup-devenv" ] || [ "$1" = "--no-gunicorn" ]; then

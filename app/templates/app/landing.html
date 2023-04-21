@@ -1,0 +1,18 @@
+{% extends 'registration/registration_base.html' %}
+{% load i18n %}
+
+{% block registration_header %}
+
+{% endblock %}
+
+{% block registration_content %}
+  <h3>{% trans 'Welcome to ASDC (Australian Scalable Drone Cloud)' %}</h3>
+  <div style="margin-bottom: 28px;">{% trans "To access this service, please login or create an account:" %}</div>
+
+
+  <a href='/login/auth0'><h2>Log In</h2><p>Log In / sign up with an [AAF / Google / Github] account</p></a>
+
+<div>Please read our <a href='/about#terms'>terms and conditions</a> and <a href='/about#privacy'>privacy policy</a> before signing up</div>
+<div>You can also access our <a href='https://asdc.io'>project site</a> or the <a href='/userguide'>user guide</a> for more information about how to use the site and what it does.</div>
+
+{% endblock %}

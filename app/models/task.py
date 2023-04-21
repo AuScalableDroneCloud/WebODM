@@ -15,13 +15,13 @@ import datetime
 
 import zipfile
 import rasterio
-from shutil import copyfile
 import requests
 from PIL import Image
 from django.contrib.gis.gdal import GDALRaster
 from django.contrib.gis.gdal import OGRGeometry
 from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.postgres import fields
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.exceptions import ValidationError, SuspiciousFileOperation
 from django.db import models
 from django.db import transaction
@@ -75,9 +75,12 @@ def wait_for_sync(fn, timeout=30):
     # we may need to wait until the uploaded file appears
     # as worker process will not see it until sync finishes
     timeout = time.time() + timeout   # Default 30 seconds from now
-    while not os.path.exists(fn) and time.time() < timeout:
+    while not os.path.exists(fn):
         logger.info(f"File not yet synched {fn}, sleeping")
-        sleep(1)
+        time.sleep(1)
+        if time.time() > timeout:
+            logger.warning(f"File not found! {fn}, timeout waiting for sync")
+            break
 
 def validate_task_options(value):
     """
@@ -97,7 +100,7 @@ def pull_image(image, task_folder, done=None):
     Retrieve uploaded image from staging area to local disk
     """
     #Default to local image stored by pathname
-    retval = image.path()
+    retval = image
     try:
         absolute_task_folder = os.path.join(settings.MEDIA_ROOT, task_folder)
         if not os.path.exists(absolute_task_folder):
@@ -110,11 +113,13 @@ def pull_image(image, task_folder, done=None):
         image_list = []
 
         #Stored as upload URL instead of local path with original filename after #
-        fp = image.image.name
-        filename = os.path.basename(fp)
-        logger.info(f"Pulling image, name: {fp}")
-        if '#' in fp:
-            uploadURL, filename = fp.rsplit('#', 1)
+        logger.info(f"Pulling image, name: {image}")
+        filename = image
+        fp = image
+        if image[-4:] == '.url':
+            filename = image[:-4]
+            with open(image, 'r') as infile:
+                uploadURL = infile.readlines()[0]
 
             # Check if url is invalid and reconstruct
             if uploadURL[0:4] != "http":
@@ -129,8 +134,11 @@ def pull_image(image, task_folder, done=None):
         else:
             #No url, just a pathname that should already exist
             uploadURL = ""
+            #If not found, try adding the task folder
+            if not os.path.exists(fp):
+                fp = os.path.join(absolute_task_folder, os.path.basename(fp))
 
-        #if not os.path.exists(fp):
+        """
         if True: #Check url for 404 instead?
             logger.info(f"- downloading to {fp}")
             logger.info(f"-- task folder {task_folder} filename {filename} endpoint {settings.AWS_S3_ENDPOINT_URL} bucket {settings.AWS_STORAGE_BUCKET_NAME}")
@@ -183,12 +191,41 @@ def pull_image(image, task_folder, done=None):
                 logger.warning(f"Error downloading image {filename} from {uploadURL}")
             except (Exception) as e:
                 logger.error(f"Error occurred: {e}")
+          """
+        if uploadURL and not os.path.exists(fp):
+            try:
+                if uploadURL[0:4] != "http":
+                    logger.info(f"- copying {uploadURL} to {fp}")
+                    shutil.copyfile(uploadURL, fp)
+                else:
+                    logger.info(f"- downloading {uploadURL} to {fp}")
+                    download_stream = requests.get(uploadURL, stream=True, timeout=60)
+                    with open(fp, 'wb') as fd:
+                        for chunk in download_stream.iter_content(4096):
+                            fd.write(chunk)
+
+                #Return the RELATIVE download dest path
+                retval = os.path.join(task_folder, filename)
+                #Remove the link file
+                os.remove(image)
+
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                logger.warning(f"Error downloading image {filename} from {uploadURL}")
+            except (Exception) as e:
+                logger.warning(f"Error copying/downloading image {filename} from {uploadURL}")
+
         else:
             #Return the recomputed RELATIVE path in case the original was malformed
-            retval = os.path.join(task_folder, filename)
+            retval = os.path.join(task_folder, os.path.basename(fp))
+            #Remove the link file
+            if image[-4:] == '.url':
+                os.remove(image)
+            logger.info(f"- file exists, no pull necessary: {retval}")
 
     except Exception  as e:
         logger.warning(f"Failed to pull image for task. We're going to proceed anyway, but you might experience issues: {e}")
+        if image[-4:] == '.url':
+            os.rename(image, image + ".failed")
 
     if done is not None:
         done(retval)
@@ -267,13 +304,12 @@ def resize_image(image_path, resize_to, done=None):
         os.rename(resized_image_path, image_path)
 
         logger.info("Resized {} to {}x{}".format(image_path, resized_width, resized_height))
-    except (IOError, ValueError) as e:
-        logger.warning("Cannot resize {}: {}.".format(image_path, str(e)))
-        if done is not None:
-            done()
-        return None
 
-    retval = {'path': image_path, 'resize_ratio': ratio}
+        retval = {'path': image_path, 'resize_ratio': ratio}
+
+    except (Exception) as e:
+        logger.warning("Exception, Cannot resize {}: {}.".format(image_path, str(e)))
+        retval = None
 
     if done is not None:
         done(retval)
@@ -296,8 +332,10 @@ class Task(models.Model):
             'georeferenced_model.csv': os.path.join('odm_georeferencing', 'odm_georeferenced_model.csv'),
             'textured_model.zip': {
                 'deferred_path': 'textured_model.zip',
-                'deferred_compress_dir': 'odm_texturing'
+                'deferred_compress_dir': 'odm_texturing',
+                'deferred_exclude_files': ('odm_textured_model_geo.glb', )
             },
+            'textured_model.glb': os.path.join('odm_texturing', 'odm_textured_model_geo.glb'),
             '3d_tiles_model.zip': {
                 'deferred_path': '3d_tiles_model.zip',
                 'deferred_compress_dir': os.path.join('3d_tiles', 'model')
@@ -355,7 +393,7 @@ class Task(models.Model):
     auto_processing_node = models.BooleanField(default=True, help_text=_("A flag indicating whether this task should be automatically assigned a processing node"), verbose_name=_("Auto Processing Node"))
     status = models.IntegerField(choices=STATUS_CODES, db_index=True, null=True, blank=True, help_text=_("Current status of the task"), verbose_name=_("Status"))
     last_error = models.TextField(null=True, blank=True, help_text=_("The last processing error received"), verbose_name=_("Last Error"))
-    options = fields.JSONField(default=dict, blank=True, help_text=_("Options that are being used to process this task"), validators=[validate_task_options], verbose_name=_("Options"))
+    options = models.JSONField(default=dict, blank=True, help_text=_("Options that are being used to process this task"), validators=[validate_task_options], verbose_name=_("Options"))
     available_assets = fields.ArrayField(models.CharField(max_length=80), default=list, blank=True, help_text=_("List of available assets to download"), verbose_name=_("Available Assets"))
     console_output = models.TextField(null=False, default="", blank=True, help_text=_("Console output of the processing node"), verbose_name=_("Console Output"))
 
@@ -385,9 +423,10 @@ class Task(models.Model):
     import_url = models.TextField(null=False, default="", blank=True, help_text=_("URL this task is imported from (only for imported tasks)"), verbose_name=_("Import URL"))
     images_count = models.IntegerField(null=False, blank=True, default=0, help_text=_("Number of images associated with this task"), verbose_name=_("Images Count"))
     partial = models.BooleanField(default=False, help_text=_("A flag indicating whether this task is currently waiting for information or files to be uploaded before being considered for processing."), verbose_name=_("Partial"))
-    potree_scene = fields.JSONField(default=dict, blank=True, help_text=_("Serialized potree scene information used to save/load measurements and camera view angle"), verbose_name=_("Potree Scene"))
+    potree_scene = models.JSONField(default=dict, blank=True, help_text=_("Serialized potree scene information used to save/load measurements and camera view angle"), verbose_name=_("Potree Scene"))
     epsg = models.IntegerField(null=True, default=None, blank=True, help_text=_("EPSG code of the dataset (if georeferenced)"), verbose_name="EPSG")
-
+    tags = models.TextField(db_index=True, default="", blank=True, help_text=_("Task tags"), verbose_name=_("Tags"))
+    
     class Meta:
         verbose_name = _("Task")
         verbose_name_plural = _("Tasks")
@@ -408,10 +447,9 @@ class Task(models.Model):
         Retrieve uploaded images from staging area to local disk
         """
         task_folder = task_directory_path(self.id, self.project_id)
+        images_path = self.task_path()
+        images_set = [os.path.join(images_path, i) for i in self.scan_images()]
 
-        #images_path = self.find_all_files_matching(r'.*\.(jpe?g|tiff?)$')
-        images_set = self.imageupload_set.all()
-        #images_set = [img.image.name for img in self.imageupload_set.all()]
         total_images = len(images_set)
         pulled_images_count = 0
         last_update = 0
@@ -425,20 +463,11 @@ class Task(models.Model):
             if time.time() - last_update >= 2:
                 # Update progress (just use the resize progress for now so we don't need to add a new model field)
                 Task.objects.filter(pk=self.id).update(resize_progress=(float(pulled_images_count) / float(total_images)))
-                self.check_if_canceled()
+                #Calling this is causing issues "RecursionError: maximum recursion depth exceeded while calling a Python object"
+                #self.check_if_canceled()
                 last_update = time.time()
 
         pulled_images = list(map(partial(pull_image, task_folder=task_folder, done=callback), images_set))
-
-        #Replace the staging urls in db with local paths
-        with transaction.atomic(): #Required for db updates
-            for i,img in enumerate(images_set):
-                #Update keys - replace with local path to file
-                prev_name = img.image.name
-                if prev_name != pulled_images[i]:
-                    img.image.name = pulled_images[i]
-                    logger.info("Changing {} to {}".format(prev_name, img.image.name))
-                    img.save()
 
         Task.objects.filter(pk=self.id).update(resize_progress=1.0)
 
@@ -461,15 +490,6 @@ class Task(models.Model):
                 shutil.move(old_task_folder, new_task_folder_parent)
 
                 logger.info("Moved task folder from {} to {}".format(old_task_folder, new_task_folder))
-
-                with transaction.atomic():
-                    for img in self.imageupload_set.all():
-                        prev_name = img.image.name
-                        img.image.name = assets_directory_path(self.id, new_project_id,
-                                                               os.path.basename(img.image.name))
-                        logger.info("Changing {} to {}".format(prev_name, img))
-                        img.save()
-
             else:
                 logger.warning("Project changed for task {}, but either {} doesn't exist, or {} already exists. This doesn't look right, so we will not move any files.".format(self,
                                                                                                              old_task_folder,
@@ -561,7 +581,9 @@ class Task(models.Model):
                     'points': points,
                 },
                 'gsd': j.get('odm_processing_statistics', {}).get('average_gsd'),
-                'area': j.get('processing_statistics', {}).get('area')
+                'area': j.get('processing_statistics', {}).get('area'),
+                'start_date': j.get('processing_statistics', {}).get('start_date'),
+                'end_date': j.get('processing_statistics', {}).get('end_date'),
             }
         else:
             return {}
@@ -578,17 +600,6 @@ class Task(models.Model):
                 task.refresh_from_db()
 
                 logger.info("Duplicating {} to {}".format(self, task))
-
-                for img in self.imageupload_set.all():
-                    img.pk = None
-                    img.task = task
-
-                    prev_name = img.image.name
-                    img.image.name = assets_directory_path(task.id, task.project.id,
-                                                            os.path.basename(img.image.name))
-                    
-                    img.save()
-
                 if os.path.isdir(self.task_path()):
                     try:
                         # Try to use hard links first
@@ -601,6 +612,7 @@ class Task(models.Model):
                         copy_tree(self.task_path(), task.task_path(), preserve_mode=0, preserve_times=0, preserve_symlinks=0, update=0)
                 else:
                     logger.warning("Task {} doesn't have folder, will skip copying".format(self))
+
             return task
         except Exception as e:
             logger.warning("Cannot duplicate task: {}".format(str(e)))
@@ -622,6 +634,8 @@ class Task(models.Model):
                 if 'deferred_path' in value and 'deferred_compress_dir' in value:
                     zip_dir = self.assets_path(value['deferred_compress_dir'])
                     paths = [{'n': os.path.relpath(os.path.join(dp, f), zip_dir), 'fs': os.path.join(dp, f)} for dp, dn, filenames in os.walk(zip_dir) for f in filenames]
+                    if 'deferred_exclude_files' in value and isinstance(value['deferred_exclude_files'], tuple):
+                        paths = [p for p in paths if os.path.basename(p['fs']) not in value['deferred_exclude_files']]
                     if len(paths) == 0:
                         raise FileNotFoundError("No files available for download")
                     return zipfly.ZipStream(paths), True
@@ -675,7 +689,7 @@ class Task(models.Model):
                 try:
                     checked_path_to_file = path_traversal_check(unsafe_path_to_import_file, imports_folder_path)
                     if os.path.isfile(checked_path_to_file):
-                        copyfile(checked_path_to_file, zip_path)
+                        shutil.copyfile(checked_path_to_file, zip_path)
                 except SuspiciousFileOperation as e:
                     logger.error("Error due importing assets from {} for {} in cause of path checking error".format(self.import_url, self))
                     raise NodeServerError(e)
@@ -711,9 +725,11 @@ class Task(models.Model):
         self.refresh_from_db()
 
         try:
-            self.extract_assets_and_complete()
+            self.extract_assets_and_complete(zip_path)
         except zipfile.BadZipFile:
             raise NodeServerError(gettext("Invalid zip file"))
+        except Exception as e:
+            raise NodeServerError(gettext(f"Invalid asset, exception: {e}"))
 
         images_json = self.assets_path("images.json")
         if os.path.exists(images_json):
@@ -752,6 +768,7 @@ class Task(models.Model):
 
             if self.pending_action == pending_actions.RESIZE:
                 resized_images = self.resize_images()
+                resized_images = [r for r in resized_images if r is not None]
                 self.refresh_from_db()
                 self.resize_gcp(resized_images)
                 self.pending_action = None
@@ -795,13 +812,14 @@ class Task(models.Model):
                 if not self.uuid and self.pending_action is None and self.status is None:
                     logger.info("Processing... {}".format(self))
 
-                    images = [image.path() for image in self.imageupload_set.all()]
+                    images_path = self.task_path()
+                    images = [os.path.join(images_path, i) for i in self.scan_images()]
 
                     #Check for urls remaining in image paths
-                    if any("https://tusd" in image for image in images):
+                    if any(image[-4:] == '.url' for image in images):
                         logger.warning("URL FOUND IN IMAGES! - reprocessing from pull")
                         for image in images:
-                            if "https://tusd" in image:
+                            if image[-4:] == '.url':
                                 logger.warning(f" - Problem image entry: {image}")
 
                         self.pending_action = pending_actions.PULL
@@ -809,8 +827,8 @@ class Task(models.Model):
 
                     #FAILSAFE: ensure all images files now exist, discard any missing
                     i1 = len(images)
+                    images = [image for image in images if os.path.exists(image)]
                     logger.info(str(images))
-                    #images = [image for image in images if os.path.exists(image)]
                     global s3
                     if s3 is None:
                         s3 = s3fs.S3FileSystem(anon=False, client_kwargs={'endpoint_url': settings.AWS_S3_ENDPOINT_URL})
@@ -954,11 +972,13 @@ class Task(models.Model):
                     self.processing_time = info.processing_time
                     self.status = info.status.value
 
-                    if len(info.output) > 0:
-                        self.console_output += "\n".join(info.output) + '\n'
-
                     # Update running progress
+                    last_progress = self.running_progress
                     self.running_progress = (info.progress / 100.0) * self.TASK_PROGRESS_LAST_VALUE
+
+                    #Only update the db field when progress changes
+                    if self.status != status_codes.RUNNING or len(info.output) > 0 and int(last_progress) > int(self.running_progress):
+                        self.console_output += "\n".join(info.output) + '\n'
 
                     if info.last_error != "":
                         self.last_error = info.last_error
@@ -1018,11 +1038,15 @@ class Task(models.Model):
                                         os.remove(all_zip_path)
                                     else:
                                         raise NodeServerError(gettext("Invalid zip file"))
-                        else:
-                            # FAILED, CANCELED
-                            self.save()
+
+                        #Save the console output to disk and clear the db field
+                        with open(self.assets_path('console_output.txt'), 'w') as f:
+                            f.write(self.console_output)
+                        self.console_output = ""
+                        self.save()
                     else:
-                        # Still waiting...
+                        # Still waiting (running)...
+                        #Do we need to save if no change??
                         self.save()
 
         except (NodeServerError, NodeResponseError) as e:
@@ -1033,14 +1057,17 @@ class Task(models.Model):
             # Task was interrupted during image resize / upload
             logger.warning("{} interrupted".format(self, str(e)))
 
-    def extract_assets_and_complete(self):
+    def extract_assets_and_complete(self, actual_path=None):
         #(TODO: S3 equivalent)
         """
         Extracts assets/all.zip, populates task fields where required and assure COGs
-        It will raise a zipfile.BadZipFile exception is the archive is corrupted.
+        It will raise a zipfile.BadZipFile exception if the archive is corrupted.
         :return:
         """
+        if actual_path:
+            wait_for_sync(actual_path)
         assets_dir = self.assets_path("")
+
         zip_path = self.assets_path("all.zip")
 
         if os.path.exists(zip_path):
@@ -1061,6 +1088,7 @@ class Task(models.Model):
             known_files = {"orthophoto.tif" : "odm_orthophoto/odm_orthophoto.tif"}
             #If not in known files, add a custom asset
             for f in os.listdir(self.assets_path()):
+                logger.info(f"-- scanning, found {f}")
                 if f in known_files:
                     src = self.assets_path(f)
                     dst = self.assets_path(known_files[f])
@@ -1078,6 +1106,23 @@ class Task(models.Model):
                 json.dump(metadata, outfile)
 
         # Populate *_extent fields
+        self.populate_extent_fields()
+
+        self.update_available_assets_field()
+        self.update_epsg_field()
+        self.potree_scene = {}
+        self.running_progress = 1.0
+        self.console_output += gettext("Done!") + "\n"
+        self.status = status_codes.COMPLETED
+        self.save()
+
+        from app.plugins import signals as plugin_signals
+        plugin_signals.task_completed.send_robust(sender=self.__class__, task_id=self.id)
+
+    def populate_extent_fields(self):
+        """
+        Populate the extents for raster assets
+        """
         extent_fields = [
             (os.path.realpath(self.assets_path("odm_orthophoto", "odm_orthophoto.tif")),
              'orthophoto_extent'),
@@ -1111,17 +1156,6 @@ class Task(models.Model):
                 setattr(self, field, GEOSGeometry(extent.wkt, srid=raster.srid))
 
                 logger.info("Populated extent field with {} for {}".format(raster_path, self))
-
-        self.update_available_assets_field()
-        self.update_epsg_field()
-        self.potree_scene = {}
-        self.running_progress = 1.0
-        self.console_output += gettext("Done!") + "\n"
-        self.status = status_codes.COMPLETED
-        self.save()
-
-        from app.plugins import signals as plugin_signals
-        plugin_signals.task_completed.send_robust(sender=self.__class__, task_id=self.id)
 
     def get_tile_path(self, tile_type, z, x, y):
         return self.assets_path("{}_tiles".format(tile_type), z, x, "{}.png".format(y))
@@ -1352,3 +1386,42 @@ class Task(models.Model):
                 pass
             else:
                 raise
+
+    def scan_images(self):
+        #TODO: S3 equiv
+        tp = self.task_path()
+        ap = self.assets_path()
+        try:
+            img_list = [e.name for e in os.scandir(tp) if e.is_file()]
+            #Fix, move to assets
+            if 'console_output.txt' in img_list:
+                shutil.move(f"{tp}/console_output.txt", f"{ap}/console_output.txt")
+                return [e.name for e in os.scandir(tp) if e.is_file()]
+            return img_list
+        except:
+            return []
+
+    def get_image_path(self, filename):
+        p = self.task_path(filename)
+        return path_traversal_check(p, self.task_path())
+    
+    def handle_images_upload(self, files):
+        #TODO: S3 equiv
+        for file in files:
+            name = file.name
+            if name is None:
+                continue
+
+            tp = self.task_path()
+            if not os.path.exists(tp):
+                os.makedirs(tp, exist_ok=True)
+
+            dst_path = self.get_image_path(name)
+
+            with open(dst_path, 'wb+') as fd:
+                if isinstance(file, InMemoryUploadedFile):
+                    for chunk in file.chunks():
+                        fd.write(chunk)
+                else:
+                    with open(file.temporary_file_path(), 'rb') as f:
+                        shutil.copyfileobj(f, fd)
