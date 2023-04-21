@@ -111,6 +111,7 @@ def import_files(task_id, files, user_id, connection_details=None):
     import requests
     from app import models
     from app.plugins import logger
+    from app.security import path_traversal_check
 
     connection = None
     if connection_details and connection_details['type'] == 'webdav':
