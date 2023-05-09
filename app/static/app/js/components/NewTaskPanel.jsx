@@ -289,7 +289,7 @@ class NewTaskPanel extends React.Component {
                 {this.state.loading ?
                   <button type="submit" className="btn btn-primary" disabled={true}><i className="fa fa-circle-notch fa-spin fa-fw"></i>{_("Loading…")}</button>
                   :
-                  <button type="submit" className="btn btn-primary" onClick={this.save} disabled={this.state.filesCount <= 1}><i className="glyphicon glyphicon-saved"></i>Start Processing</button>
+                  <button type="submit" className="btn btn-primary" onClick={this.save} disabled={this.state.filesCount < 1}><i className="glyphicon glyphicon-saved"></i>Start Processing</button>
                 }
               </div>
             </div>
