@@ -532,6 +532,20 @@ class Task(models.Model):
         else:
             raise FileNotFoundError("{} is not a valid asset".format(asset))
 
+    def image_count(self):
+        """
+        Return image count
+        """
+        found_count = len(self.scan_images())
+        uploaded_count = len(self.uploaded_images())
+        if uploaded_count < found_count:
+            return found_count
+        elif found_count == 0:
+            #Images not yet synched
+            return uploaded_count
+        else:
+            raise ValidationError(f"Images count mismatch: {uploaded_count} uploaded != {found_count} on filesystem")
+
     def uploaded_images(self, files=None):
         """
         Read or write uploaded image list in the task assets folder
@@ -539,9 +553,12 @@ class Task(models.Model):
         os.makedirs(self.assets_path(), exist_ok=True)
         if files is None:
             #Load the saved uploaded.json
-            with open(self.assets_path('uploaded.json'), 'r') as src:
-                files = json.load(src)
-                return files
+            try:
+                with open(self.assets_path('uploaded.json'), 'r') as src:
+                    files = json.load(src)
+                    return files
+            except (FileNotFoundError) as e:
+                return []
         else:
             #Store the uploaded file list
             with open(self.assets_path('uploaded.json'), 'w') as out:

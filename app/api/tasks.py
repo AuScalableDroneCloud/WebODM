@@ -202,8 +202,7 @@ class TaskViewSet(viewsets.ViewSet):
             raise exceptions.NotFound()
 
         task.partial = False
-        #task.images_count = len(task.scan_images())
-        task.images_count = len(task.uploaded_images())
+        task.images_count = task.image_count()
 
         if task.images_count < 1:
             raise exceptions.ValidationError(detail=_("You need to upload at least 1 file before commit"))
@@ -231,7 +230,8 @@ class TaskViewSet(viewsets.ViewSet):
             raise exceptions.ValidationError(detail=_("No files uploaded"))
 
         task.handle_images_upload(files)
-        task.images_count = len(task.scan_images())
+        task.images_count = task.image_count()
+
         # Update other parameters such as processing node, task name, etc.
         serializer = TaskSerializer(task, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -301,7 +301,7 @@ class TaskViewSet(viewsets.ViewSet):
                                                   pending_action=pending_actions.RESIZE if 'resize_to' in request.data else None)
 
                 task.handle_images_upload(files)
-                task.images_count = len(task.scan_images())
+                task.images_count = task.image_count()
 
                 # Update other parameters such as processing node, task name, etc.
                 serializer = TaskSerializer(task, data=request.data, partial=True)
