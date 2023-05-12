@@ -208,10 +208,10 @@ class TaskViewSet(viewsets.ViewSet):
             raise exceptions.NotFound()
 
         task.partial = False
-        task.images_count = len(task.scan_images())
+        task.images_count = len(task.uploaded_images())
 
-        if task.images_count < 2:
-            raise exceptions.ValidationError(detail=_("You need to upload at least 2 images before commit"))
+        if task.images_count < 1:
+            raise exceptions.ValidationError(detail=_("You need to upload at least 1 file before commit"))
 
         task.save()
         worker_tasks.process_task.delay(task.id)
@@ -262,16 +262,8 @@ class TaskViewSet(viewsets.ViewSet):
 
         task.create_task_directories()
 
-        #For debugging, store the uploaded file list
-        with open(task.assets_path('uploaded.json'), 'w') as out:
-            json.dump(files, out)
-
-        for image in files:
-            #Create .url files containing the uploaded location
-            #(original_filename.ext.url)
-            fn = task.task_path(image['name'] + '.url')
-            with open(fn, 'w') as out:
-                out.write(image["uploadURL"])
+        #Store the upload list
+        task.uploaded_images(files)
 
         return Response({'success': True}, status=status.HTTP_200_OK)
 
@@ -299,7 +291,7 @@ class TaskViewSet(viewsets.ViewSet):
         # for now we just create a placeholder task.
         if request.data.get('partial'):
             task = models.Task.objects.create(project=project,
-                                              pending_action=pending_actions.PULL)
+                                              pending_action=pending_actions.RESIZE if 'resize_to' in request.data else None)
             serializer = TaskSerializer(task, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
@@ -311,7 +303,7 @@ class TaskViewSet(viewsets.ViewSet):
 
             with transaction.atomic():
                 task = models.Task.objects.create(project=project,
-                                                  pending_action=pending_actions.PULL)
+                                                  pending_action=pending_actions.RESIZE if 'resize_to' in request.data else None)
 
                 task.handle_images_upload(files)
                 task.images_count = len(task.scan_images())

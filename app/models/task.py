@@ -51,6 +51,42 @@ s3 = None
 
 logger = logging.getLogger('app.logger')
 
+s3_client = None
+
+def connect_s3():
+    """
+    Open connection to S3 object storage
+    """
+    import boto3
+    import botocore
+    aws_id = os.environ["AWS_ACCESS_KEY_ID"]
+    aws_key = os.environ["AWS_SECRET_ACCESS_KEY"]
+    aws_region = 'us-east-1' #os.environ["AWS_REGION"]
+    aws_endpoint = os.environ["AWS_ENDPOINT"]
+    if len(aws_id) and len(aws_key):
+        #Connect with object storage
+        session = boto3.session.Session()
+        s3_client = session.client(
+            service_name='s3',
+            aws_access_key_id=aws_id,
+            aws_secret_access_key=aws_key,
+            endpoint_url=aws_endpoint,
+            # The next option is only required because my provider only offers "version 2"
+            # authentication protocol. Otherwise this would be 's3v4' (the default, version 4).
+            config=botocore.client.Config(signature_version='s3'),
+        )
+
+        #Successful
+        return s3_client
+
+    return None
+
+try:
+    import boto3
+    #Connect with object storage
+    s3_client = connect_s3()
+except ImportError as e:
+    print("AWS S3 connection unavailable, missing boto3 module.")
 class TaskInterruptedException(Exception):
     pass
 
@@ -94,143 +130,6 @@ def validate_task_options(value):
             if not option['value']: raise ValidationError("Value key not found in option")
     except:
         raise ValidationError("Invalid options")
-
-def pull_image(image, task_folder, done=None):
-    """
-    Retrieve uploaded image from staging area to local disk
-    """
-    #Default to local image stored by pathname
-    retval = image
-    try:
-        absolute_task_folder = os.path.join(settings.MEDIA_ROOT, task_folder)
-        if not os.path.exists(absolute_task_folder):
-            logger.warning(f"Project folder {absolute_task_folder} for task doesn't exist, this doesn't look right, so we will not retrieve any files.")
-            return []
-        logger.info(f"Found task folder {absolute_task_folder}")
-
-        import io
-        import json
-        image_list = []
-
-        #Stored as upload URL instead of local path with original filename after #
-        logger.info(f"Pulling image, name: {image}")
-        filename = image
-        fp = image
-        if image[-4:] == '.url':
-            filename = image[:-4]
-            with open(image, 'r') as infile:
-                uploadURL = infile.readlines()[0]
-
-            # Check if url is invalid and reconstruct
-            if uploadURL[0:4] != "http":
-                domain = os.environ.get('WO_HOST')
-                ufn = uploadURL.rsplit('/', 1)[1]
-                uploadURL = f"https://tusd.{domain}/files/{ufn}"
-                logger.info(f"- rebuilt source url: {uploadURL}")
-
-            logger.info(f"- orig filename {filename} source url {uploadURL} ")
-            #Download from upload server if doesn't exist
-            fp = os.path.join(absolute_task_folder, filename)
-        else:
-            #No url, just a pathname that should already exist
-            uploadURL = ""
-            #If not found, try adding the task folder
-            if not os.path.exists(fp):
-                fp = os.path.join(absolute_task_folder, os.path.basename(fp))
-
-        """
-        if True: #Check url for 404 instead?
-            logger.info(f"- downloading to {fp}")
-            logger.info(f"-- task folder {task_folder} filename {filename} endpoint {settings.AWS_S3_ENDPOINT_URL} bucket {settings.AWS_STORAGE_BUCKET_NAME}")
-            try:
-                sfp = os.path.join(settings.AWS_STORAGE_BUCKET_NAME, task_folder, filename)
-                download_stream = requests.get(uploadURL, stream=True, timeout=60)
-                global s3
-                if s3 is None:
-                    s3 = s3fs.S3FileSystem(anon=False, client_kwargs={'endpoint_url': settings.AWS_S3_ENDPOINT_URL})
-                ddir = os.path.dirname(sfp)
-                logger.info(f"- makedirs {ddir}")
-                s3.makedirs(ddir)
-                '''
-                logger.info(f"- open {sfp}")
-                #block_size = 5 * (1024 ** 2)
-                with s3.open(sfp, 'wb', block_size=block_size) as fd:
-                    logger.info(f"- opened {sfp}")
-                    for chunk in download_stream.iter_content(1024*200):
-                        logger.info(f"- write chunk {c}")
-                        #Why is this throwing errors? 22 OSError - only when files exceed 5MB!?
-                        fd.write(chunk)
-                logger.info(f"- done {sfp}")
-                #Return the filename in s3 store incl bucket
-                #https://s3.region-code.amazonaws.com/bucket-name/key-name
-                #retval = os.path.join(settings.AWS_S3_ENDPOINT_URL, settings.AWS_STORAGE_BUCKET_NAME, task_folder, filename)
-                retval = os.path.join(task_folder, filename)
-                logger.info(f"- WROTE {sfp} as {retval}")
-                #Filename should already be an s3 url?
-                #retval = filename
-                '''
-                import tempfile
-                tmp = tempfile.NamedTemporaryFile()
-                fp = tmp.name
-
-                logger.info(f"- save to tempfile {fp}")
-                with open(fp, 'wb') as fd:
-                    for chunk in download_stream.iter_content(4096*100):
-                        fd.write(chunk)
-                #Return the RELATIVE download dest path
-                #retval = os.path.join(task_folder, filename)
-
-                logger.info(f"- open {sfp}")
-                s3.put(fp, sfp)
-                #retval = sfp #os.path.join(task_folder, filename)
-                retval = os.path.join(task_folder, filename)
-                logger.info(f"- done, returning {retval}")
-
-            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
-                logger.warning(f"Error occurred: {e}")
-                logger.warning(f"Error downloading image {filename} from {uploadURL}")
-            except (Exception) as e:
-                logger.error(f"Error occurred: {e}")
-          """
-        if uploadURL and not os.path.exists(fp):
-            try:
-                if uploadURL[0:4] != "http":
-                    logger.info(f"- copying {uploadURL} to {fp}")
-                    shutil.copyfile(uploadURL, fp)
-                else:
-                    logger.info(f"- downloading {uploadURL} to {fp}")
-                    download_stream = requests.get(uploadURL, stream=True, timeout=60)
-                    with open(fp, 'wb') as fd:
-                        for chunk in download_stream.iter_content(4096):
-                            fd.write(chunk)
-
-                #Return the RELATIVE download dest path
-                retval = os.path.join(task_folder, filename)
-                #Remove the link file
-                os.remove(image)
-
-            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
-                logger.warning(f"Error downloading image {filename} from {uploadURL}")
-            except (Exception) as e:
-                logger.warning(f"Error copying/downloading image {filename} from {uploadURL}")
-
-        else:
-            #Return the recomputed RELATIVE path in case the original was malformed
-            retval = os.path.join(task_folder, os.path.basename(fp))
-            #Remove the link file
-            if image[-4:] == '.url':
-                os.remove(image)
-            logger.info(f"- file exists, no pull necessary: {retval}")
-
-    except Exception  as e:
-        logger.warning(f"Failed to pull image for task. We're going to proceed anyway, but you might experience issues: {e}")
-        if image[-4:] == '.url':
-            os.rename(image, image + ".failed")
-
-    if done is not None:
-        done(retval)
-
-    return retval
 
 def resize_image(image_path, resize_to, done=None):
     """
@@ -378,7 +277,6 @@ class Task(models.Model):
         (pending_actions.RESTART, 'RESTART'),
         (pending_actions.RESIZE, 'RESIZE'),
         (pending_actions.IMPORT, 'IMPORT'),
-        (pending_actions.PULL, 'PULL'),
     )
 
     TASK_PROGRESS_LAST_VALUE = 0.85
@@ -441,37 +339,6 @@ class Task(models.Model):
         name = self.name if self.name is not None else gettext("unnamed")
 
         return 'Task [{}] ({})'.format(name, self.id)
-
-    def pull_images(self):
-        """
-        Retrieve uploaded images from staging area to local disk
-        """
-        task_folder = task_directory_path(self.id, self.project_id)
-        images_path = self.task_path()
-        images_set = [os.path.join(images_path, i) for i in self.scan_images()]
-
-        total_images = len(images_set)
-        pulled_images_count = 0
-        last_update = 0
-
-        def callback(retval=None):
-            nonlocal last_update
-            nonlocal pulled_images_count
-            nonlocal total_images
-
-            pulled_images_count += 1
-            if time.time() - last_update >= 2:
-                # Update progress (just use the resize progress for now so we don't need to add a new model field)
-                Task.objects.filter(pk=self.id).update(resize_progress=(float(pulled_images_count) / float(total_images)))
-                #Calling this is causing issues "RecursionError: maximum recursion depth exceeded while calling a Python object"
-                #self.check_if_canceled()
-                last_update = time.time()
-
-        pulled_images = list(map(partial(pull_image, task_folder=task_folder, done=callback), images_set))
-
-        Task.objects.filter(pk=self.id).update(resize_progress=1.0)
-
-        return pulled_images
 
     def move_assets(self, old_project_id, new_project_id):
         """
@@ -667,6 +534,167 @@ class Task(models.Model):
         else:
             raise FileNotFoundError("{} is not a valid asset".format(asset))
 
+    def uploaded_images(self, files=None):
+        """
+        Read or write uploaded image list in the task assets folder
+        """
+        os.makedirs(self.assets_path(), exist_ok=True)
+        if files is None:
+            #Load the saved uploaded.json
+            with open(self.assets_path('uploaded.json'), 'r') as src:
+                files = json.load(src)
+                return files
+        else:
+            #Store the uploaded file list
+            with open(self.assets_path('uploaded.json'), 'w') as out:
+                json.dump(files, out)
+                return files
+
+    def sync_images(self):
+        """
+        Synchronise uploaded images to the task folder
+        """
+        files = self.uploaded_images()
+
+        aws_image_bucket = os.getenv("AWS_IMAGE_BUCKET", '')
+        aws_storage_bucket = os.getenv("AWS_STORAGE_BUCKET", '')
+
+        from threading import Thread
+        import queue
+
+        class CopyThread(Thread):
+            def __init__(self, src_bucket, dst_bucket, q, *args, **kwargs):
+                self.src_bucket = src_bucket
+                self.dst_bucket = dst_bucket
+                self.q = q
+                super().__init__(*args, **kwargs)
+
+            def run(self):
+                s3_client = connect_s3()
+                while True:
+                    try:
+                        item = self.q.get(timeout=3)  # 3s timeout
+                    except queue.Empty:
+                        return
+                    logger.info(str(item))
+                    src, dst = item
+                    if not self.src_bucket:
+                        #No source bucket (tusd to s3 disabled)
+                        logger.info(f"- downloading {src} to {dst}")
+                        download_stream = requests.get(src, stream=True, timeout=60)
+                        with open(dst, 'wb') as fd:
+                            for chunk in download_stream.iter_content(4096):
+                                fd.write(chunk)
+                    elif not self.dst_bucket:
+                        #Download to local filesystem rather than another s3 store
+                        with open(dst, 'wb') as f:
+                            logger.info(f"{src}")
+                            s3_client.download_fileobj(self.src_bucket, src, f)
+                    else:
+                        #Copy directly between s3 buckets - fastest
+                        response = s3_client.copy_object(
+                            CopySource=f'/{self.src_bucket}/src',   # /Bucket-name/path/filename
+                            Bucket=self.dst_bucket,                 # Destination bucket
+                            Key=dst                                 # Destination path/filename
+                        )
+                        if response['ResponseMetadata']['HTTPStatusCode'] == 200:
+                            logger.info(f'200: {src}, {dst}')
+                        else:
+                            logger.info(str(response))
+                    self.q.task_done()
+
+        q = queue.Queue()
+        for image in files:
+            if not aws_image_bucket:
+                #No s3 uploads enabled, get from src url
+                src = image["uploadURL"]
+            else:
+                #Extract the src key from upload URL
+                src = re.match(r".*\/files\/(.*)\+", image["uploadURL"]).group(1)
+
+            if not aws_storage_bucket or not aws_image_bucket:
+                #Copy to full local filesystem path
+                dst = self.task_path(image['name'])
+            else:
+                #S3 Path - relative to object store root
+                dst = os.path.join(assets_directory_path(self.id, self.project.id, image['name']))
+
+            logger.info(dst)
+            logger.info(src)
+            #Add tuple src, dst to queue
+            q.put_nowait((src, dst))
+
+        num_threads = 32
+
+        for i in range(num_threads):
+            CopyThread(aws_image_bucket, aws_storage_bucket, q).start()
+
+        # Block until all tasks are done.
+        q.join()
+        logger.info('All sync jobs completed')
+
+        #Wait for each image to appear in local filesystem
+        for image in files:
+            wait_for_sync(self.task_path(image['name']))
+
+        logger.info('All images synchronised')
+
+        """
+        FROM OLD PULL_IMAGE
+        if True: #Check url for 404 instead?
+            logger.info(f"- downloading to {fp}")
+            logger.info(f"-- task folder {task_folder} filename {filename} endpoint {settings.AWS_S3_ENDPOINT_URL} bucket {settings.AWS_STORAGE_BUCKET_NAME}")
+            try:
+                sfp = os.path.join(settings.AWS_STORAGE_BUCKET_NAME, task_folder, filename)
+                download_stream = requests.get(uploadURL, stream=True, timeout=60)
+                global s3
+                if s3 is None:
+                    s3 = s3fs.S3FileSystem(anon=False, client_kwargs={'endpoint_url': settings.AWS_S3_ENDPOINT_URL})
+                ddir = os.path.dirname(sfp)
+                logger.info(f"- makedirs {ddir}")
+                s3.makedirs(ddir)
+                '''
+                logger.info(f"- open {sfp}")
+                #block_size = 5 * (1024 ** 2)
+                with s3.open(sfp, 'wb', block_size=block_size) as fd:
+                    logger.info(f"- opened {sfp}")
+                    for chunk in download_stream.iter_content(1024*200):
+                        logger.info(f"- write chunk {c}")
+                        #Why is this throwing errors? 22 OSError - only when files exceed 5MB!?
+                        fd.write(chunk)
+                logger.info(f"- done {sfp}")
+                #Return the filename in s3 store incl bucket
+                #https://s3.region-code.amazonaws.com/bucket-name/key-name
+                #retval = os.path.join(settings.AWS_S3_ENDPOINT_URL, settings.AWS_STORAGE_BUCKET_NAME, task_folder, filename)
+                retval = os.path.join(task_folder, filename)
+                logger.info(f"- WROTE {sfp} as {retval}")
+                #Filename should already be an s3 url?
+                #retval = filename
+                '''
+                import tempfile
+                tmp = tempfile.NamedTemporaryFile()
+                fp = tmp.name
+
+                logger.info(f"- save to tempfile {fp}")
+                with open(fp, 'wb') as fd:
+                    for chunk in download_stream.iter_content(4096*100):
+                        fd.write(chunk)
+                #Return the RELATIVE download dest path
+                #retval = os.path.join(task_folder, filename)
+
+                logger.info(f"- open {sfp}")
+                s3.put(fp, sfp)
+                #retval = sfp #os.path.join(task_folder, filename)
+                retval = os.path.join(task_folder, filename)
+                logger.info(f"- done, returning {retval}")
+
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                logger.warning(f"Error occurred: {e}")
+                logger.warning(f"Error downloading image {filename} from {uploadURL}")
+            except (Exception) as e:
+                logger.error(f"Error occurred: {e}")
+          """
+
     def handle_import(self):
         self.console_output += gettext("Importing assets...") + "\n"
         self.save()
@@ -757,15 +785,6 @@ class Task(models.Model):
             if self.pending_action == pending_actions.IMPORT:
                 self.handle_import()
 
-            if self.pending_action == pending_actions.PULL:
-                #Retrieve uploaded images from staging area to local disk
-                images = self.pull_images()
-                if self.resize_to:
-                    self.pending_action = pending_actions.RESIZE
-                else:
-                    self.pending_action = None
-                self.save()
-
             if self.pending_action == pending_actions.RESIZE:
                 resized_images = self.resize_images()
                 resized_images = [r for r in resized_images if r is not None]
@@ -812,33 +831,16 @@ class Task(models.Model):
                 if not self.uuid and self.pending_action is None and self.status is None:
                     logger.info("Processing... {}".format(self))
 
+                    #Ensure image copies in sync
+                    files = self.uploaded_images()
+
                     images_path = self.task_path()
                     images = [os.path.join(images_path, i) for i in self.scan_images()]
 
-                    #Check for urls remaining in image paths
-                    if any(image[-4:] == '.url' for image in images):
-                        logger.warning("URL FOUND IN IMAGES! - reprocessing from pull")
-                        for image in images:
-                            if image[-4:] == '.url':
-                                logger.warning(f" - Problem image entry: {image}")
-
-                        self.pending_action = pending_actions.PULL
-                        return self.process()
-
-                    #FAILSAFE: ensure all images files now exist, discard any missing
-                    i1 = len(images)
-                    images = [image for image in images if os.path.exists(image)]
-                    logger.info(str(images))
-                    global s3
-                    if s3 is None:
-                        s3 = s3fs.S3FileSystem(anon=False, client_kwargs={'endpoint_url': settings.AWS_S3_ENDPOINT_URL})
-                    #Generate urls (these will expire, could cause issues...)
-                    images = [image.url() for image in self.imageupload_set.all() if s3.exists(image.path())]
-                    #images = [image.url() for image in self.imageupload_set.all()]
-
-                    i2 = len(images)
-                    if i2 < i1:
-                        logger.warning(f"Some images not found! uploaded: {i1} > found: {i2}!")
+                    #Check for image count errors, call sync images if mismatch
+                    if len(images) != len(files):
+                        self.sync_images()
+                        images = [os.path.join(images_path, i) for i in self.scan_images()]
 
                     # Track upload progress, but limit the number of DB updates
                     # to every 2 seconds (and always record the 100% progress)
@@ -1389,6 +1391,13 @@ class Task(models.Model):
 
     def scan_images(self):
         #TODO: S3 equiv
+        #global s3
+        #if s3 is None:
+        #    s3 = s3fs.S3FileSystem(anon=False, client_kwargs={'endpoint_url': settings.AWS_S3_ENDPOINT_URL})
+        ##Generate urls (these will expire, could cause issues...)
+        #images = [image.url() for image in self.imageupload_set.all() if s3.exists(image.path())]
+        ##images = [image.url() for image in self.imageupload_set.all()]
+
         tp = self.task_path()
         ap = self.assets_path()
         try:
