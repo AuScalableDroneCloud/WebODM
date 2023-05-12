@@ -57,10 +57,10 @@ def connect_s3():
     """
     import boto3
     import botocore
-    aws_id = os.environ["AWS_ACCESS_KEY_ID"]
-    aws_key = os.environ["AWS_SECRET_ACCESS_KEY"]
-    aws_region = 'us-east-1' #os.environ["AWS_REGION"]
-    aws_endpoint = os.environ["AWS_ENDPOINT"]
+    aws_id = os.getenv("AWS_ACCESS_KEY_ID", '')
+    aws_key = os.getenv("AWS_SECRET_ACCESS_KEY", '')
+    aws_region = os.getenv("AWS_REGION", 'us-east-1')
+    aws_endpoint = os.getenv("AWS_ENDPOINT", '')
     if len(aws_id) and len(aws_key):
         #Connect with object storage
         session = boto3.session.Session()
