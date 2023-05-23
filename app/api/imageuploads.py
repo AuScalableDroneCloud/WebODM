@@ -169,7 +169,7 @@ class ImagesDownload(TaskNestedView):
         images = task.scan_images()
 
         #n: (optional) internal archive filename, fs: filesystem path
-        paths = [{'n': os.path.basename(i), 'fs': os.path.join(settings.MEDIA_ROOT, i)} for i in images]
+        paths = [{'n': os.path.basename(i), 'fs': task.get_image_path(i)} for i in images]
         print(paths)
         if len(paths) == 0:
             raise FileNotFoundError("No files available for download")
