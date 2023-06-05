@@ -554,8 +554,10 @@ class Task(models.Model):
         os.makedirs(self.assets_path(), exist_ok=True)
         if files is None:
             #Load the saved uploaded.json
+            uploaded_fn = self.assets_path('uploaded.json')
+            wait_for_sync(uploaded_fn)
             try:
-                with open(self.assets_path('uploaded.json'), 'r') as src:
+                with open(uploaded_fn, 'r') as src:
                     files = json.load(src)
                     return files
             except (FileNotFoundError) as e:
