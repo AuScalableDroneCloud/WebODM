@@ -7,6 +7,7 @@ coreapi>=2.3.3
 Django==3.2.18
 django-appconf==1.0.5
 django-codemirror2==0.2
+<<<<<<< HEAD
 django-colorfield==0.8.0
 django-compressor==4.3.1 #2.4.1
 django-cors-headers==3.13.0
@@ -17,6 +18,19 @@ django-libsass==0.9
 django-webpack-loader==1.8.1
 djangorestframework==3.14.0
 drf-jwt==1.19.2
+=======
+django-colorfield==0.1.15
+django-compressor==2.2
+django-cors-headers==3.0.2
+django-filter==2.4.0
+django-guardian==1.4.9
+django-imagekit==4.0.1
+django-libsass==0.7
+django-redis==4.12.1
+django-webpack-loader==0.6.0
+djangorestframework==3.13.1
+djangorestframework-jwt==1.9.0
+>>>>>>> 5fc886028e18683784f4dc6edffe8c51da42f640
 djangorestframework-guardian==0.3.0
 django-oauth-toolkit==2.2.0
 social-auth-core==4.3.0
@@ -35,10 +49,18 @@ openapi-codec==1.3.2
 packaging==23.0
 piexif==1.1.3
 pilkit==2.0
+<<<<<<< HEAD
 Pillow==9.4.0
 pip-autoremove==0.10.0
 psycopg2-binary==2.9.5
 PyJWT==2.6.0
+=======
+Pillow==8.3.2
+pip-autoremove==0.9.0
+psycopg2-binary==2.8.6
+PyJWT==1.5.3
+pydantic==1.10.8
+>>>>>>> 5fc886028e18683784f4dc6edffe8c51da42f640
 pyodm==1.5.10
 pyparsing==3.0.9
 python-jose==3.3.0

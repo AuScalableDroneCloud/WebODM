@@ -1,3 +1,7 @@
 **/.git
+<<<<<<< HEAD
 app/static/app/bundles
 **/node_modules
+=======
+.secret_key
+>>>>>>> 5fc886028e18683784f4dc6edffe8c51da42f640
