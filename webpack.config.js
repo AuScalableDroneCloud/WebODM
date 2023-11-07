@@ -4,10 +4,13 @@ let BundleTracker = require('webpack-bundle-tracker');
 let LiveReloadPlugin = require('webpack-livereload-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
-module.exports = {
-  mode: 'development',
-  context: __dirname,
+const mode = process.argv.indexOf("production") !== -1 ? "production" : "development";
+console.log(`Webpack mode: ${mode}`);
 
+module.exports = {
+  mode,
+  context: __dirname,
+  
   entry: {
     main: ['./app/static/app/js/main.jsx'],
     Console: ['./app/static/app/js/Console.jsx'],

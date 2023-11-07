@@ -213,9 +213,13 @@ class NewTaskPanel extends React.Component {
   }
 
   render() {
+    let filesCountOk = true;
+    if (this.taskForm && !this.taskForm.checkFilesCount(this.props.filesCount)) filesCountOk = false;
+    
     return (
       <div className="new-task-panel theme-background-highlight">
         <div className="form-horizontal">
+<<<<<<< HEAD
           <div>
             {this.props.selecting ?
               <Dashboard
@@ -233,6 +237,20 @@ class NewTaskPanel extends React.Component {
 
             <p>{interpolate(_("%(count)s files selected. Please check these additional options:"), { count: this.state.filesCount})}</p>
 
+=======
+          <div className={this.state.inReview ? "disabled" : ""}>
+            <p>{interpolate(_("%(count)s files selected. Please check these additional options:"), { count: this.props.filesCount})}</p>
+
+            {!filesCountOk ? 
+            <div className="alert alert-warning">
+              {interpolate(_("Number of files selected exceeds the maximum of %(count)s allowed on this processing node."), { count: this.taskForm.selectedNodeMaxImages() })}
+              <button onClick={this.props.onCancel} type="button" className="btn btn-xs btn-primary redo">
+                <span><i className="glyphicon glyphicon-remove-circle"></i> {_("Cancel")}</span>
+              </button>
+            </div>
+            : ""}
+
+>>>>>>> 5fc886028e18683784f4dc6edffe8c51da42f640
             <EditTaskForm
               selectedNode={Storage.getItem("last_processing_node") || "auto"}
               onFormLoaded={this.handleFormTaskLoaded}
@@ -289,7 +307,11 @@ class NewTaskPanel extends React.Component {
                 {this.state.loading ?
                   <button type="submit" className="btn btn-primary" disabled={true}><i className="fa fa-circle-notch fa-spin fa-fw"></i>{_("Loading…")}</button>
                   :
+<<<<<<< HEAD
                   <button type="submit" className="btn btn-primary" onClick={this.save} disabled={this.state.filesCount < 1}><i className="glyphicon glyphicon-saved"></i>Start Processing</button>
+=======
+                  <button type="submit" className="btn btn-primary" onClick={this.save} disabled={this.props.filesCount < 1 || !filesCountOk}><i className="glyphicon glyphicon-saved"></i> {!this.state.inReview ? _("Review") : _("Start Processing")}</button>
+>>>>>>> 5fc886028e18683784f4dc6edffe8c51da42f640
                 }
               </div>
             </div>
