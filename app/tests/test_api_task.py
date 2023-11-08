@@ -160,6 +160,8 @@ class TestApiTask(BootTransactionTestCase):
             with open(resized_task.task_path("gcp.txt")) as f:
                 lines = list(map(lambda l: l.strip(), f.readlines()))
 
+                logger.log(logging.INFO, f"RESIZE TASK GCP FILE CONTENTS: {lines}")
+
                 [x, y, z, px, py, imagename, *extras] = lines[1].split(' ')
                 self.assertTrue(imagename == "tiny_drone_image.JPG") # case insensitive
                 self.assertEqual(float(px), 2.0) # scaled by half
