@@ -45,7 +45,7 @@ services:
     restart: unless-stopped
     oom_score_adj: 0
   broker:
-    image: redis
+    image: redis:7.0.10
     user: redis
     container_name: broker
     restart: unless-stopped
