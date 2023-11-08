@@ -7,6 +7,7 @@ import ImportTaskPanel from './ImportTaskPanel';
 import ErrorMessage from './ErrorMessage';
 import EditProjectDialog from './EditProjectDialog';
 import SortPanel from './SortPanel';
+import Dropzone from '../vendor/dropzone';
 import csrf from '../django/csrf';
 import HistoryNav from '../classes/HistoryNav';
 import PropTypes from 'prop-types';
