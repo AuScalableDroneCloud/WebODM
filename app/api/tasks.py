@@ -148,7 +148,7 @@ class TaskViewSet(viewsets.ViewSet):
         except (ObjectDoesNotExist, ValidationError):
             raise exceptions.NotFound()
 
-        output = task.console.reset()
+        output = ""
         if task.processing_node and task.uuid and task.status == status_codes.RUNNING:
             # Update task info from processing node
             info = task.processing_node.get_task_info(task.uuid, 0)
