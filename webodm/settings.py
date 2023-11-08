@@ -28,18 +28,21 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'  #3.2
 try:
     from .secret_key import SECRET_KEY
 except ImportError:
-    # This will be executed the first time Django runs
-    # It generates a secret_key.py file that contains the SECRET_KEY
-    from django.utils.crypto import get_random_string
+    if os.environ.get("WO_SECRET_KEY", "") != "":
+        SECRET_KEY = os.environ.get("WO_SECRET_KEY")
+    else:
+        # This will be executed the first time Django runs
+        # It generates a secret_key.py file that contains the SECRET_KEY
+        from django.utils.crypto import get_random_string
 
-    current_dir = os.path.abspath(os.path.dirname(__file__))
-    chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
-    secret = get_random_string(50, chars)
-    with open(os.path.join(current_dir, 'secret_key.py'), 'w') as f:
-        f.write("SECRET_KEY='{}'".format(secret))
-    SECRET_KEY = secret
+        current_dir = os.path.abspath(os.path.dirname(__file__))
+        chars = 'abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)'
+        secret = get_random_string(50, chars)
+        with open(os.path.join(current_dir, 'secret_key.py'), 'w') as f:
+            f.write("SECRET_KEY='{}'".format(secret))
+        SECRET_KEY=secret
 
-    print("Generated secret key")
+        print("Generated secret key")
 
 with open(os.path.join(BASE_DIR, 'package.json')) as package_file:
     data = json.load(package_file)
@@ -211,6 +214,7 @@ AUTHENTICATION_BACKENDS = (
     'social_core.backends.auth0.Auth0OAuth2',
     'django.contrib.auth.backends.ModelBackend', # this is default
     'guardian.backends.ObjectPermissionBackend',
+    'app.auth.backends.ExternalBackend',
     'django.contrib.auth.backends.RemoteUserBackend',
 )
 
@@ -447,14 +451,60 @@ CELERY_INCLUDE=['worker.tasks', 'app.plugins.worker']
 CELERY_WORKER_REDIRECT_STDOUTS = False
 CELERY_WORKER_HIJACK_ROOT_LOGGER = False
 
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": os.environ.get('WO_BROKER', 'redis://localhost'),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
 # Number of minutes a processing node hasn't been seen 
 # before it should be considered offline
-NODE_OFFLINE_MINUTES = 5 
+NODE_OFFLINE_MINUTES = 5
+
+# When turned on, updates nodes information only when necessary
+# and assumes that all nodes are always online, avoiding polling
+NODE_OPTIMISTIC_MODE = False
+
+# URL to external auth endpoint
+EXTERNAL_AUTH_ENDPOINT = ''
+
+# URL to a page where a user can reset the password
+RESET_PASSWORD_LINK = ''
+
+# Number of hours before tasks are automatically deleted
+# from an account that is exceeding a disk quota
+QUOTA_EXCEEDED_GRACE_PERIOD = 8
+
+# Maximum number of processing nodes to show in "Processing Nodes" menus/dropdowns
+UI_MAX_PROCESSING_NODES = None
+
+# Number of hours before partial tasks
+# are removed (or None to disable)
+CLEANUP_PARTIAL_TASKS = 72
+
+# Link to GCP docs
+GCP_DOCS_LINK = "https://docs.opendronemap.org/gcp/#gcp-file-format"
+
+# Link to general docs
+DOCS_LINK = "https://docs.opendronemap.org"
+
+# Link to task options docs
+TASK_OPTIONS_DOCS_LINK = "https://docs.opendronemap.org/arguments/"
 
 if TESTING or FLUSHING:
     CELERY_TASK_ALWAYS_EAGER = True
+    EXTERNAL_AUTH_ENDPOINT = 'http://0.0.0.0:5555/auth'
 
 try:
     from .local_settings import *
+except ImportError:
+    pass
+
+try:
+    from .settings_override import *
 except ImportError:
     pass

@@ -213,6 +213,9 @@ class NewTaskPanel extends React.Component {
   }
 
   render() {
+    let filesCountOk = true;
+    if (this.taskForm && !this.taskForm.checkFilesCount(this.props.filesCount)) filesCountOk = false;
+    
     return (
       <div className="new-task-panel theme-background-highlight">
         <div className="form-horizontal">

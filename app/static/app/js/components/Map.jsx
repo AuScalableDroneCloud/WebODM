@@ -94,6 +94,16 @@ class Map extends React.Component {
       return "";
   }
 
+  hasBands = (bands, orthophoto_bands) => {
+    if (!orthophoto_bands) return false;
+
+    for (let i = 0; i < bands.length; i++){
+      if (orthophoto_bands.find(b => b.description !== null && b.description.toLowerCase() === bands[i].toLowerCase()) === undefined) return false;
+    }
+    
+    return true;
+  }
+
   loadImageryLayers(forceAddLayers = false){
     // Cancel previous requests
     if (this.tileJsonRequests) {
@@ -131,7 +141,11 @@ class Map extends React.Component {
             // Single band, probably thermal dataset, in any case we can't render NDVI
             // because it requires 3 bands
             metaUrl += "?formula=Celsius&bands=L&color_map=magma";
+          }else if (meta.task && meta.task.orthophoto_bands){
+            let formula = this.hasBands(["red", "green", "nir"], meta.task.orthophoto_bands) ? "NDVI" : "VARI";
+            metaUrl += `?formula=${formula}&bands=auto&color_map=rdylgn`;
           }else{
+            // This should never happen?
             metaUrl += "?formula=NDVI&bands=RGN&color_map=rdylgn";
           }
         }else if (type == "dsm" || type == "dtm"){
@@ -399,14 +413,14 @@ class Map extends React.Component {
 
       const customLayer = L.layerGroup();
       customLayer.on("add", a => {
-        const defaultCustomBm = window.localStorage.getItem('lastCustomBasemap') || 'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        const defaultCustomBm = window.localStorage.getItem('lastCustomBasemap') || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
       
         let url = window.prompt([_('Enter a tile URL template. Valid coordinates are:'),
 _('{z}, {x}, {y} for Z/X/Y tile scheme'),
 _('{-y} for flipped TMS-style Y coordinates'),
 '',
 _('Example:'),
-'https://a.tile.openstreetmap.org/{z}/{x}/{y}.png'].join("\n"), defaultCustomBm);
+'https://tile.openstreetmap.org/{z}/{x}/{y}.png'].join("\n"), defaultCustomBm);
         
         if (url){
           customLayer.clearLayers();
@@ -482,7 +496,11 @@ _('Example:'),
     });
     new AddOverlayCtrl().addTo(this.map);
 
-    this.map.fitWorld();
+    this.map.fitBounds([
+     [13.772919746115805,
+     45.664640939831735],
+     [13.772825784981254,
+     45.664591558975154]]);
     this.map.attributionControl.setPrefix("");
 
     this.setState({showLoading: true});

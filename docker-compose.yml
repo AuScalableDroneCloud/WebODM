@@ -41,6 +41,7 @@ services:
       - WO_AUTH0_SECRET
       - WO_ENCRYPTION_KEY
       - PIPELINES_URL
+      - WO_SECRET_KEY
     restart: unless-stopped
     oom_score_adj: 0
   broker:
@@ -63,5 +64,6 @@ services:
     environment:
       - WO_BROKER
       - WO_DEBUG
+      - WO_SECRET_KEY
     restart: unless-stopped
     oom_score_adj: 250

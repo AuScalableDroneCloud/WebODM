@@ -14,6 +14,7 @@ django-filter==21.1 #Later versions break field filters
 django-guardian==2.4.0
 django-imagekit==4.1.0
 django-libsass==0.9
+django-redis==4.12.1
 django-webpack-loader==1.8.1
 djangorestframework==3.14.0
 drf-jwt==1.19.2
@@ -39,6 +40,7 @@ Pillow==9.4.0
 pip-autoremove==0.10.0
 psycopg2-binary==2.9.5
 PyJWT==2.6.0
+pydantic==1.10.8
 pyodm==1.5.10
 pyparsing==3.0.9
 python-jose==3.3.0

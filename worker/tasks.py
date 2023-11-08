@@ -11,6 +11,7 @@ from celery.utils.log import get_task_logger
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count
 from django.db.models import Q
+from app.models import Profile
 
 from app.models import Project
 from app.models import Task
@@ -22,6 +23,8 @@ import worker
 from .celery import app
 from app.raster_utils import export_raster as export_raster_sync, extension_for_export_format
 from app.pointcloud_utils import export_pointcloud as export_pointcloud_sync
+from django.utils import timezone
+from datetime import timedelta
 import redis
 
 logger = get_task_logger("app.logger")
@@ -30,8 +33,11 @@ redis_client = redis.Redis.from_url(settings.CELERY_BROKER_URL)
 # What class to use for async results, since during testing we need to mock it
 TestSafeAsyncResult = worker.celery.MockAsyncResult if settings.TESTING else app.AsyncResult
 
-@app.task
+@app.task(ignore_result=True)
 def update_nodes_info():
+    if settings.NODE_OPTIMISTIC_MODE:
+        return
+    
     processing_nodes = ProcessingNode.objects.all()
     for processing_node in processing_nodes:
         processing_node.update_node_info()
@@ -53,7 +59,7 @@ def update_nodes_info():
                     processing_node.hostname = check_hostname
                 processing_node.save()
 
-@app.task
+@app.task(ignore_result=True)
 def cleanup_projects():
     # Delete all projects that are marked for deletion
     # and that have no tasks left
@@ -63,8 +69,18 @@ def cleanup_projects():
     if total > 0 and 'app.Project' in count_dict:
         logger.info("Deleted {} projects".format(count_dict['app.Project']))
 
+@app.task(ignore_result=True)
+def cleanup_tasks():
+    # Delete tasks that are older than 
+    if settings.CLEANUP_PARTIAL_TASKS is None:
+        return
+    
+    tasks_to_delete = Task.objects.filter(partial=True, created_at__lte=timezone.now() - timedelta(hours=settings.CLEANUP_PARTIAL_TASKS))
+    for t in tasks_to_delete:
+        logger.info("Cleaning up partial task {}".format(t))
+        t.delete()
 
-@app.task
+@app.task(ignore_result=True)
 def cleanup_tmp_directory():
     # Delete files and folder in the tmp directory that are
     # older than 24 hours
@@ -97,7 +113,7 @@ def setInterval(interval, func, *args):
     t.start()
     return stopped.set
 
-@app.task
+@app.task(ignore_result=True)
 def process_task(taskId):
     lock_id = 'task_lock_{}'.format(taskId)
     cancel_monitor = None
@@ -157,7 +173,7 @@ def get_pending_tasks():
                                   processing_node__isnull=False, partial=False) |
                                 Q(pending_action__isnull=False, partial=False))
 
-@app.task
+@app.task(ignore_result=True)
 def process_pending_tasks():
     tasks = get_pending_tasks()
     for task in tasks:
@@ -172,7 +188,6 @@ def execute_grass_script(script, serialized_context = {}, out_key='output'):
     except GrassEngineException as e:
         logger.error(str(e))
         return {'error': str(e), 'context': ctx.serialize()}
-
 
 @app.task(bind=True)
 def export_raster(self, input, **opts):
@@ -205,3 +220,34 @@ def export_pointcloud(self, input, **opts):
     except Exception as e:
         logger.error(str(e))
         return {'error': str(e)}
+
+@app.task(ignore_result=True)
+def check_quotas():
+    profiles = Profile.objects.filter(quota__gt=-1)
+    for p in profiles:
+        if p.has_exceeded_quota():
+            deadline = p.get_quota_deadline()
+            if deadline is None:
+                deadline = p.set_quota_deadline(settings.QUOTA_EXCEEDED_GRACE_PERIOD)
+            now = time.time()
+            if now > deadline:
+                # deadline passed, delete tasks until quota is met
+                logger.info("Quota deadline expired for %s, deleting tasks" % str(p.user.username))
+                task_count = Task.objects.filter(project__owner=p.user).count()
+                c = 0
+
+                while p.has_exceeded_quota():
+                    try:
+                        last_task = Task.objects.filter(project__owner=p.user).order_by("-created_at").first()
+                        if last_task is None:
+                            break
+                        logger.info("Deleting %s" % last_task)
+                        last_task.delete()
+                    except Exception as e:
+                        logger.warn("Cannot delete %s for %s: %s" % (str(last_task), str(p.user.username), str(e)))
+                    
+                    c += 1
+                    if c >= task_count:
+                        break
+        else:
+            p.clear_quota_deadline()
