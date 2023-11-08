@@ -298,7 +298,6 @@ class Task(models.Model):
     last_error = models.TextField(null=True, blank=True, help_text=_("The last processing error received"), verbose_name=_("Last Error"))
     options = models.JSONField(default=dict, blank=True, help_text=_("Options that are being used to process this task"), validators=[validate_task_options], verbose_name=_("Options"))
     available_assets = fields.ArrayField(models.CharField(max_length=80), default=list, blank=True, help_text=_("List of available assets to download"), verbose_name=_("Available Assets"))
-    console_output = models.TextField(null=False, default="", blank=True, help_text=_("Console output of the processing node"), verbose_name=_("Console Output"))
 
     orthophoto_extent = GeometryField(null=True, blank=True, srid=4326, help_text=_("Extent of the orthophoto"), verbose_name=_("Orthophoto Extent"))
     dsm_extent = GeometryField(null=True, blank=True, srid=4326, help_text="Extent of the DSM", verbose_name=_("DSM Extent"))
@@ -962,7 +961,7 @@ class Task(models.Model):
 
                     #Only update the db field when progress changes
                     if self.status != status_codes.RUNNING or len(info.output) > 0 and int(last_progress) > int(self.running_progress):
-                        self.console_output += "\n".join(info.output) + '\n'
+                        self.console += "\n".join(info.output) + '\n'
 
                     if info.last_error != "":
                         self.last_error = info.last_error
@@ -1028,8 +1027,8 @@ class Task(models.Model):
 
                         #Save the console output to disk and clear the db field
                         with open(self.assets_path('console_output.txt'), 'w') as f:
-                            f.write(self.console_output)
-                        self.console_output = ""
+                            f.write(self.console.output())
+                        self.console.reset()
                         self.save()
 
 
@@ -1101,7 +1100,7 @@ class Task(models.Model):
         self.update_orthophoto_bands_field()
         self.potree_scene = {}
         self.running_progress = 1.0
-        self.console_output += gettext("Done!") + "\n"
+        self.console += gettext("Done!") + "\n"
         self.status = status_codes.COMPLETED
         self.save()
 
