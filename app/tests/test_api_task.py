@@ -162,13 +162,13 @@ class TestApiTask(BootTransactionTestCase):
 
                 logger.log(logging.INFO, f"RESIZE TASK GCP FILE CONTENTS: {lines}")
 
-                [x, y, z, px, py, imagename, *extras] = lines[1].split(' ')
+                [x, y, z, px, py, imagename, *extras] = lines[1].split()    # previously .split(' ')
                 self.assertTrue(imagename == "tiny_drone_image.JPG") # case insensitive
                 self.assertEqual(float(px), 2.0) # scaled by half
                 self.assertEqual(float(py), 3.0) # scaled by half
                 self.assertEqual(float(x), 576529.22) # Didn't change
 
-                [x, y, z, px, py, imagename, *extras] = lines[5].split(' ')
+                [x, y, z, px, py, imagename, *extras] = lines[5].split()    # previously .split(' ')
                 self.assertEqual(imagename, "missing_image.jpg")
                 self.assertEqual(float(px), 8.0)  # Didn't change
                 self.assertEqual(float(py), 8.0)  # Didn't change
