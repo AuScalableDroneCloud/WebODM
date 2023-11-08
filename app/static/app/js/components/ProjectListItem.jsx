@@ -60,6 +60,7 @@ class ProjectListItem extends React.Component {
     this.closeUploadError = this.closeUploadError.bind(this);
     this.cancelUpload = this.cancelUpload.bind(this);
     this.handleTaskReview = this.handleTaskReview.bind(this);
+    this.handleCancel = this.handleCancel.bind(this);
     this.handleTaskSaved = this.handleTaskSaved.bind(this);
     this.viewMap = this.viewMap.bind(this);
     this.handleDelete = this.handleDelete.bind(this);
@@ -131,6 +132,172 @@ class ProjectListItem extends React.Component {
   }
 
   componentDidMount(){
+    Dropzone.autoDiscover = false;
+
+    if (this.hasPermission("add")){
+      this.dz = new Dropzone(this.dropzone, {
+          paramName: "images",
+          url : 'TO_BE_CHANGED',
+          parallelUploads: 6,
+          uploadMultiple: false,
+          acceptedFiles: "image/*,text/*,.las,.laz,video/*,.srt",
+          autoProcessQueue: false,
+          createImageThumbnails: false,
+          clickable: this.uploadButton,
+          maxFilesize: 131072, // 128G
+          chunkSize: 2147483647,
+          timeout: 2147483647,
+          
+          headers: {
+            [csrf.header]: csrf.token
+          }
+      });
+
+      this.dz.on("addedfiles", files => {
+          let totalBytes = 0;
+          for (let i = 0; i < files.length; i++){
+              totalBytes += files[i].size;
+              files[i].deltaBytesSent = 0;
+              files[i].trackedBytesSent = 0;
+              files[i].retries = 0;
+          }
+
+          this.setUploadState({
+            editing: true,
+            totalCount: this.state.upload.totalCount + files.length,
+            files,
+            totalBytes: this.state.upload.totalBytes + totalBytes
+          });
+        })
+        .on("uploadprogress", (file, progress, bytesSent) => {
+            const now = new Date().getTime();
+
+            if (bytesSent > file.size) bytesSent = file.size;
+            
+            if (progress === 100 || now - this.state.upload.lastUpdated > 500){
+                const deltaBytesSent = bytesSent - file.deltaBytesSent;
+                file.trackedBytesSent += deltaBytesSent;
+
+                const totalBytesSent = this.state.upload.totalBytesSent + deltaBytesSent;
+                const progress = totalBytesSent / this.state.upload.totalBytes * 100;
+
+                this.setUploadState({
+                    progress,
+                    totalBytesSent,
+                    lastUpdated: now
+                });
+
+                file.deltaBytesSent = bytesSent;
+            }
+        })
+        .on("complete", (file) => {
+            // Retry
+            const retry = () => {
+                const MAX_RETRIES = 10;
+
+                if (file.retries < MAX_RETRIES){
+                    // Update progress
+                    const totalBytesSent = this.state.upload.totalBytesSent - file.trackedBytesSent;
+                    const progress = totalBytesSent / this.state.upload.totalBytes * 100;
+        
+                    this.setUploadState({
+                        progress,
+                        totalBytesSent,
+                    });
+        
+                    file.status = Dropzone.QUEUED;
+                    file.deltaBytesSent = 0;
+                    file.trackedBytesSent = 0;
+                    file.retries++;
+                    this.dz.processQueue();
+                }else{
+                    throw new Error(interpolate(_('Cannot upload %(filename)s, exceeded max retries (%(max_retries)s)'), {filename: file.name, max_retries: MAX_RETRIES}));
+                }
+            };
+
+            try{
+                if (file.status === "error"){
+                    if ((file.size / 1024) > this.dz.options.maxFilesize) {
+                        // Delete from upload queue
+                        this.setUploadState({
+                            totalCount: this.state.upload.totalCount - 1,
+                            totalBytes: this.state.upload.totalBytes - file.size
+                        });
+                        throw new Error(interpolate(_('Cannot upload %(filename)s, File too Large! Default MaxFileSize is %(maxFileSize)s MB!'), { filename: file.name, maxFileSize: this.dz.options.maxFilesize }));
+                    }
+                    retry();
+                }else{
+                    // Check response
+                    let response = JSON.parse(file.xhr.response);
+                    if (response.success){
+                        // Update progress by removing the tracked progress and 
+                        // use the file size as the true number of bytes
+                        let totalBytesSent = this.state.upload.totalBytesSent + file.size;
+                        if (file.trackedBytesSent) totalBytesSent -= file.trackedBytesSent;
+        
+                        const progress = totalBytesSent / this.state.upload.totalBytes * 100;
+        
+                        this.setUploadState({
+                            progress,
+                            totalBytesSent,
+                            uploadedCount: this.state.upload.uploadedCount + 1
+                        });
+
+                        this.dz.processQueue();
+                    }else{
+                        retry();
+                    }
+                }
+            }catch(e){
+                if (this.manuallyCanceled){
+                  // Manually canceled, ignore error
+                  this.setUploadState({uploading: false});
+                }else{
+                  this.setUploadState({error: `${e.message}`, uploading: false});
+                }
+
+                if (this.dz.files.length) this.dz.cancelUpload();
+            }
+        })
+        .on("queuecomplete", () => {
+            const remainingFilesCount = this.state.upload.totalCount - this.state.upload.uploadedCount;
+            if (remainingFilesCount === 0 && this.state.upload.uploadedCount > 0){
+                // All files have uploaded!
+                this.setUploadState({uploading: false});
+
+                $.ajax({
+                    url: `/api/projects/${this.state.data.id}/tasks/${this.dz._taskInfo.id}/commit/`,
+                    contentType: 'application/json',
+                    dataType: 'json',
+                    type: 'POST'
+                  }).done((task) => {
+                    if (task && task.id){
+                        this.newTaskAdded();
+                    }else{
+                        this.setUploadState({error: interpolate(_('Cannot create new task. Invalid response from server: %(error)s'), { error: JSON.stringify(task) }) });
+                    }
+                  }).fail(() => {
+                    this.setUploadState({error: _("Cannot create new task. Please try again later.")});
+                  });
+            }else if (this.dz.getQueuedFiles() === 0){
+                // Done but didn't upload all?
+                this.setUploadState({
+                    totalCount: this.state.upload.totalCount - remainingFilesCount,
+                    uploading: false,
+                    error: interpolate(_('%(count)s files cannot be uploaded. As a reminder, only images (.jpg, .tif, .png) and GCP files (.txt) can be uploaded. Try again.'), { count: remainingFilesCount })
+                });
+            }
+        })
+        .on("reset", () => {
+          this.resetUploadState();
+        })
+        .on("dragenter", () => {
+          if (!this.state.upload.editing){
+            this.resetUploadState();
+          }
+        });
+    }
+    
     PluginsAPI.Dashboard.triggerAddNewTaskButton({projectId: this.state.data.id, onNewTaskAdded: this.newTaskAdded}, (button) => {
         if (!button) return;
 
@@ -184,7 +351,24 @@ class ProjectListItem extends React.Component {
     this.setUploadState({error: ""});
   }
 
-  cancelUpload(e){
+  cancelUpload(){
+    this.dz.removeAllFiles(true);
+  }
+
+  handleCancel(){
+    this.manuallyCanceled = true;
+    this.cancelUpload();
+    if (this.dz._taskInfo && this.dz._taskInfo.id !== undefined){
+      $.ajax({
+        url: `/api/projects/${this.state.data.id}/tasks/${this.dz._taskInfo.id}/remove/`,
+        contentType: 'application/json',
+        dataType: 'json',
+        type: 'POST'
+      });
+    }
+    setTimeout(() => {
+      this.manuallyCanceled = false;
+    }, 500);
   }
 
   taskDeleted(){
@@ -272,6 +456,20 @@ class ProjectListItem extends React.Component {
 
   handleEditProject(){
     this.editProjectDialog.show();
+  }
+
+  handleHideProject = (deleteWarning, deleteAction) => {
+    return () => {
+      if (window.confirm(deleteWarning)){
+        this.setState({error: "", refreshing: true});
+        deleteAction()
+          .fail(e => {
+            this.setState({error: e.message || (e.responseJSON || {}).detail || e.responseText || _("Could not delete item")});
+          }).always(() => {
+            this.setState({refreshing: false});
+          });
+      }
+    }
   }
 
   submitUpload(task){
@@ -534,7 +732,7 @@ class ProjectListItem extends React.Component {
             <button disabled={this.state.upload.error !== ""} 
                     type="button"
                     className={"btn btn-danger btn-sm " + (!this.state.upload.uploading ? "hide" : "")} 
-                    onClick={this.cancelUpload}>
+                    onClick={this.handleCancel}>
               <i className="glyphicon glyphicon-remove-circle"></i>
               Cancel Upload
             </button> 
@@ -610,6 +808,12 @@ class ProjectListItem extends React.Component {
                 [<i key="edit-icon" className='far fa-edit'></i>
                 ,<a key="edit-text" href="javascript:void(0);" onClick={this.handleEditProject}> {_("Edit")}
                 </a>]
+            : ""}
+
+            {!canEdit && !data.owned ? 
+              [<i key="edit-icon" className='far fa-eye-slash'></i>
+              ,<a key="edit-text" href="javascript:void(0);" onClick={this.handleHideProject(deleteWarning, this.handleDelete)}> {_("Delete")}
+              </a>]
             : ""}
 
           </div>

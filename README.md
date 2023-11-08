@@ -38,9 +38,11 @@ A user-friendly, commercial grade software for drone image processing. Generate 
 
 Windows and macOS users can purchase an automated [installer](https://www.opendronemap.org/webodm/download#installer), which makes the installation process easier.
 
-To install WebODM manually, these steps should get you up and running:
+There's also a cloud-hosted version of WebODM available from [webodm.net](https://webodm.net).
 
-* Install the following applications (if they are not installed already):
+To install WebODM manually on your machine:
+
+* Install the following applications:
   - [Git](https://git-scm.com/downloads)
   - [Docker](https://www.docker.com/)
   - [Docker-compose](https://docs.docker.com/compose/install/)
@@ -234,9 +236,9 @@ WebODM by itself is just a user interface (see [below](#odm-nodeodm-webodm-what)
 
 Small customizations such as changing the application colors, name, logo, or addying custom CSS/HTML/Javascript can be performed directly from the Customize -- Brand/Theme panels within WebODM. No need to fork or change the code.
 
-More advanced customizations can be achieved by writing [plugins](https://github.com/OpenDroneMap/WebODM/tree/master/plugins). This is the preferred way to add new functionality to WebODM since it requires less effort than maintaining a separate fork. The plugin system features server-side [signals](https://github.com/OpenDroneMap/WebODM/blob/master/app/plugins/signals.py) that can be used to be notified of various events, a ES6/React build system, a dynamic [client-side API](https://github.com/OpenDroneMap/WebODM/tree/master/app/static/app/js/classes/plugins) for adding elements to the UI, a built-in data store, an async task runner, a GRASS engine, hooks to add menu items and functions to rapidly inject CSS, Javascript and Django views.
+More advanced customizations can be achieved by writing [plugins](https://github.com/OpenDroneMap/WebODM/tree/master/coreplugins). This is the preferred way to add new functionality to WebODM since it requires less effort than maintaining a separate fork. The plugin system features server-side [signals](https://github.com/OpenDroneMap/WebODM/blob/master/app/plugins/signals.py) that can be used to be notified of various events, a ES6/React build system, a dynamic [client-side API](https://github.com/OpenDroneMap/WebODM/tree/master/app/static/app/js/classes/plugins) for adding elements to the UI, a built-in data store, an async task runner, a GRASS engine, hooks to add menu items and functions to rapidly inject CSS, Javascript and Django views.
 
-For plugins, the best source of documentation currently is to look at existing [code](https://github.com/OpenDroneMap/WebODM/tree/master/plugins). If a particular hook / entrypoint for your plugin does not yet exist, [request it](https://github.com/OpenDroneMap/WebODM/issues). We are adding hooks and entrypoints as we go.
+For plugins, the best source of documentation currently is to look at existing [code](https://github.com/OpenDroneMap/WebODM/tree/master/coreplugins). If a particular hook / entrypoint for your plugin does not yet exist, [request it](https://github.com/OpenDroneMap/WebODM/issues). We are adding hooks and entrypoints as we go.
 
 To create a plugin simply copy the `plugins/test` plugin into a new directory (for example, `plugins/myplugin`), then modify `manifest.json`, `plugin.py` and issue a `./webodm.sh restart`.
 
@@ -270,6 +272,7 @@ There are many ways to contribute back to the project:
  - Help answer questions on the community [forum](http://community.opendronemap.org/c/webodm) and [chat](https://gitter.im/OpenDroneMap/web-development).
  - ⭐️ us on GitHub.
  - Help us [translate](#translations) WebODM in your language.
+ - Help us classify [point cloud datasets](https://github.com/OpenDroneMap/ODMSemantic3D).
  - Spread the word about WebODM and OpenDroneMap on social media.
  - While we don't accept donations, you can purchase an [installer](https://webodm.org/download#installer), a [book](https://odmbook.com/) or a [sponsor package](https://github.com/users/pierotofy/sponsorship).
  - You can [pledge funds](https://fund.webodm.org) for getting new features built and bug fixed.
