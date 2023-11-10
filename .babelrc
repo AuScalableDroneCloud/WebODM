@@ -4,7 +4,8 @@
   "env": {
     "test": {
       "plugins": ["@babel/syntax-class-properties",
-                 "@babel/proposal-class-properties"]
+                 "@babel/proposal-class-properties",
+                 "@babel/plugin-proposal-optional-chaining"]
     }
   }
 }
