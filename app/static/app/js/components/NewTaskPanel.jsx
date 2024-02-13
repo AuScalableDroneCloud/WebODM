@@ -90,8 +90,8 @@ class NewTaskPanel extends React.Component {
         }
 
         let ext = currentFile.name.slice(-4)
-        if (ext === '.txt' && currentFile.name.indexOf('gcp_list') != 0) {
-          log(`Skipping .txt file, only gcp_list.txt permitted`)
+        if (ext === '.txt' && (currentFile.name.indexOf('gcp_list') != 0 || currentFile.name.indexOf('geo') != 0)) {
+          log(`Skipping .txt file, only gcp_list.txt and geo.txt permitted`)
           return false;
         }
 
